@@ -1,0 +1,12 @@
+# Railway source build for the branded Dixian web UI.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.railway"
+watchPatterns = ["/frontend/**"]
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+drainingSeconds = 10

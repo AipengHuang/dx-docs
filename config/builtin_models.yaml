@@ -1,0 +1,45 @@
+# 帝显内置对话模型。
+# API 密钥只从 .env 注入；请勿在本文件中写入明文密钥。
+builtin_models:
+  - id: dixian-deepseek-v4-flash
+    tenant_id: 10000
+    name: deepseek-v4-flash
+    type: KnowledgeQA
+    source: remote
+    description: 帝显默认对话与智能体模型
+    is_default: true
+    status: active
+    parameters:
+      base_url: https://api.deepseek.com/v1
+      api_key: ${DEEPSEEK_API_KEY}
+      provider: deepseek
+
+  - id: dixian-jina-reranker-v2
+    tenant_id: 10000
+    name: jina-reranker-v2-base-multilingual
+    type: Rerank
+    source: remote
+    description: 帝显中文与多语种知识检索精排模型
+    is_default: true
+    status: active
+    parameters:
+      base_url: https://api.jina.ai/v1
+      api_key: ${JINA_API_KEY}
+      provider: jina
+
+  - id: dixian-jina-embeddings-v3
+    tenant_id: 10000
+    name: jina-embeddings-v3
+    type: Embedding
+    source: remote
+    description: 帝显中文与多语种知识库向量模型
+    is_default: true
+    status: active
+    parameters:
+      base_url: https://api.jina.ai/v1
+      api_key: ${JINA_API_KEY}
+      provider: jina
+      embedding_parameters:
+        dimension: 1024
+        truncate_prompt_tokens: 0
+        supports_dimension_override: true

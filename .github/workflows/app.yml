@@ -1,33 +1,7 @@
 name: App
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "**/*.go"
-      - "!cli/**"
-      - "go.mod"
-      - "go.sum"
-      - "Makefile"
-      - "config/**"
-      - "migrations/**"
-      - "scripts/**"
-      - "skills/preloaded/**"
-      - "docker/Dockerfile.app"
-      - ".github/workflows/app.yml"
-  pull_request:
-    paths:
-      - "**/*.go"
-      - "!cli/**"
-      - "go.mod"
-      - "go.sum"
-      - "Makefile"
-      - "config/**"
-      - "migrations/**"
-      - "scripts/**"
-      - "skills/preloaded/**"
-      - "docker/Dockerfile.app"
-      - ".github/workflows/app.yml"
+  workflow_call:
   workflow_dispatch:
 
 concurrency:

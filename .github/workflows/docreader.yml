@@ -1,27 +1,7 @@
 name: DocReader
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "docreader/**"
-      - "go.mod"
-      - "go.sum"
-      - "testdata/**"
-      - "packages/**"
-      - "docker/Dockerfile.docreader"
-      - "docker/Dockerfile.odl-hybrid"
-      - ".github/workflows/docreader.yml"
-  pull_request:
-    paths:
-      - "docreader/**"
-      - "go.mod"
-      - "go.sum"
-      - "testdata/**"
-      - "packages/**"
-      - "docker/Dockerfile.docreader"
-      - "docker/Dockerfile.odl-hybrid"
-      - ".github/workflows/docreader.yml"
+  workflow_call:
   workflow_dispatch:
 
 concurrency:

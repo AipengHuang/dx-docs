@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: wechatopenai/weknora-ui:${WEKNORA_VERSION:-latest}
+    image: dixian/ui:${DIXIAN_UI_VERSION:-local}
     # Requires frontend/dist — run ./scripts/build_frontend_dist.sh before --build
     build:
       context: ./frontend
@@ -24,6 +24,20 @@ services:
       - WeKnora-network
     restart: unless-stopped
 
+  # Local multilingual embedding runtime for document indexing. The model is
+  # pulled explicitly after the container starts so image upgrades never
+  # replace or discard the model volume.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: dixian-ollama
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+
   app:
     image: wechatopenai/weknora-app:${WEKNORA_VERSION:-latest}
     build:
@@ -38,12 +52,14 @@ services:
       - data-files:/data/files
       - docreader-tmp:/tmp/docreader:ro
       - ./config/config.yaml:/app/config/config.yaml
+      - ./config/builtin_agents.yaml:/app/config/builtin_agents.yaml:ro
+      - ./config/prompt_templates:/app/config/prompt_templates:ro
       # Optional: mount custom skills directory (allows adding skills without rebuilding image)
       - ./skills/preloaded:/app/skills/preloaded
       # Optional: declarative built-in models. Copy config/builtin_models.yaml.example
       # to config/builtin_models.yaml, edit it for your deployment, then
       # uncomment the line below. See docs/BUILTIN_MODELS.md.
-      # - ./config/builtin_models.yaml:/app/config/builtin_models.yaml:ro
+      - ./config/builtin_models.yaml:/app/config/builtin_models.yaml:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -295,7 +311,7 @@ services:
       # DB host would skip the 5432 port block.)
       # doris-be: Stream Load follows FE→BE redirects that must receive Basic
       # credentials on whitelisted BE hosts.
-      - SSRF_WHITELIST_EXTRA=${SSRF_WHITELIST_EXTRA:-searxng,qdrant,milvus,weaviate,doris-fe,doris-be}
+      - SSRF_WHITELIST_EXTRA=${SSRF_WHITELIST_EXTRA:-searxng,qdrant,milvus,weaviate,doris-fe,doris-be,api.deepseek.com,api.jina.ai}
       - CONCURRENCY_POOL_SIZE=${CONCURRENCY_POOL_SIZE:-5}
       - JWT_SECRET=${JWT_SECRET:-}
       # File size limit (in MB)
@@ -1010,6 +1026,7 @@ networks:
     driver: bridge
 
 volumes:
+  ollama-data:
   postgres-data:
   data-files:
   docreader-tmp:

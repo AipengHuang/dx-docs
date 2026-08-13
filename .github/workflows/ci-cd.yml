@@ -1,0 +1,37 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: dixian-ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: App CI
+    uses: ./.github/workflows/app.yml
+
+  frontend:
+    name: Frontend CI
+    uses: ./.github/workflows/frontend.yml
+
+  docreader:
+    name: DocReader CI
+    uses: ./.github/workflows/docreader.yml
+
+  railway-deployment-gate:
+    name: Railway deployment gate
+    needs: [app, frontend, docreader]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Release production deployment
+        run: |
+          echo "All Dixian checks passed. Railway may deploy ${GITHUB_SHA}."

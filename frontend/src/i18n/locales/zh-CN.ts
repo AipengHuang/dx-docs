@@ -269,8 +269,8 @@ export default {
     filterByAgentWithName: '按智能体筛选：{name}',
     filterAllAgents: '全部智能体',
     claw: {
-      title: 'WeKnora Skill',
-      subtitle: '通过 WeKnora REST API 导入文档并执行混合检索（向量 + 关键词）。适用于上传文件/URL/Markdown 到知识库、跨库检索与浏览知识内容。',
+      title: '帝显 Skill',
+      subtitle: '通过帝显 REST API 导入文档并执行混合检索（向量 + 关键词）。适用于上传文件/URL/Markdown 到知识库、跨库检索与浏览知识内容。',
       capabilitiesTitle: 'Skill 能力',
       stepsTitle: '配置步骤',
       openApiSettings: '打开 API 信息',
@@ -279,7 +279,7 @@ export default {
       copyCmdSuccess: '已复制安装命令',
       ecosystemNote: 'Skill 托管于 ClawHub（{\'@\'}lyingbug/weknora），完整 API 说明与版本历史请参见 ClawHub 页面。',
       installCta: '前往 ClawHub',
-      installCtaHint: '安装 WeKnora Skill · 将在新标签页打开',
+      installCtaHint: '安装帝显 Skill · 将在新标签页打开',
       hubMeta: 'ClawHub · {\'@\'}lyingbug/weknora · MIT-0',
       steps: {
         verify: {
@@ -324,7 +324,7 @@ export default {
     },
     chrome: {
       title: '知识管理助手',
-      subtitle: '配合 WeKnora 自建服务使用：在任意网页侧边栏提问、剪藏内容、Markdown 速记，将浏览中的知识沉淀到你的知识库。',
+      subtitle: '配合帝显自建服务使用：在任意网页侧边栏提问、剪藏内容、Markdown 速记，将浏览中的知识沉淀到你的知识库。',
       capabilitiesTitle: '核心能力',
       stepsTitle: '配置步骤',
       openApiSettings: '打开 API 信息',
@@ -344,7 +344,7 @@ export default {
         },
         port: {
           title: '桌面版配置固定端口（推荐）',
-          desc: '使用 WeKnora 桌面版时，在 API 信息中设置固定端口（如 37841），避免每次启动后地址变化导致插件断连。'
+          desc: '使用帝显桌面版时，在 API 信息中设置固定端口（如 37841），避免每次启动后地址变化导致插件断连。'
         },
         api: {
           title: '获取 API 凭证',
@@ -432,7 +432,7 @@ export default {
       capabilityMessageHistory: '消息历史',
       capabilityMessageHistoryHint: '允许检索空间聊天历史并读取聊天历史统计；不授予空间配置权限。',
       capabilityManageModels: '管理模型',
-      capabilityManageModelsHint: '允许管理模型配置、模型凭据、模型连通性测试和 WeKnoraCloud 凭据。',
+      capabilityManageModelsHint: '允许管理模型配置、模型凭据、模型连通性测试和帝显 Cloud 凭据。',
       capabilityManageMcpServices: '管理 MCP 服务',
       capabilityManageMcpServicesHint: '允许管理 MCP 服务、凭据、工具审批策略和该主体的 OAuth 授权状态。',
       capabilityManageDatasources: '管理数据源',
@@ -474,14 +474,14 @@ export default {
       directWarning: '直接传用户 ID 会信任调用方请求头，仅适用于可信服务端到服务端调用。',
       directWarningDetail: '任何持有 API Key 的调用方都可以通过修改用户 ID 请求头冒充其他外部用户，从而共用或劫持其 MCP OAuth 授权。请勿用于浏览器或不可信客户端；面向终端用户请使用「签名 Token」。',
       signedRecommended: '推荐给面向用户的应用：由你的业务后端为外部用户签发短期 HS256 JWT。',
-      signedFlowDetail: 'HMAC 密钥仅保存在 WeKnora 与你的可信后端，切勿放入请求或下发给浏览器。请求头里传的是用该密钥签出的 JWT 字符串（每次签发或过期后会变），不是密钥本身。JWT 须包含 sub（外部用户 ID）、tenant_id、aud=weknora、exp（有效期不超过 24 小时）。',
+      signedFlowDetail: 'HMAC 密钥仅保存在帝显与你的可信后端，切勿放入请求或下发给浏览器。请求头里传的是用该密钥签出的 JWT 字符串（每次签发或过期后会变），不是密钥本身。JWT 须包含 sub（外部用户 ID）、tenant_id、aud=weknora、exp（有效期不超过 24 小时）。',
       directHeader: '用户 ID 请求头',
       requireDirectHeader: '必须携带用户 ID',
       requireDirectHeaderDesc: '开启后，缺少用户 ID 请求头的 API Key 请求将被拒绝；关闭则按整个空间统一处理，不区分具体终端用户。',
       tokenHeader: 'Token 请求头',
       tokenHeaderDesc: '客户端在该固定请求头中携带后端签发的 JWT。',
       hmacSecret: 'HMAC 密钥',
-      hmacSecretDesc: '与 WeKnora 保存的同一份密钥；仅用于后端签发 JWT，不要作为请求头发送。',
+      hmacSecretDesc: '与帝显保存的同一份密钥；仅用于后端签发 JWT，不要作为请求头发送。',
       secretConfigured: '已配置密钥（不可回看）；输入新值可轮换',
       secretSavedCopyHint: '密钥已保存，请立即复制到后端配置。离开本页后将无法再次查看。',
       generateSecret: '生成密钥',
@@ -1340,8 +1340,8 @@ export default {
           desc: 'Microsoft MarkItDown 文档转换工具（支持 PDF/Office/HTML 等）'
         },
         weknoracloud: {
-          name: 'WeKnora Cloud',
-          desc: '使用 WeKnora Cloud 进行文档解析'
+          name: '帝显 Cloud',
+          desc: '使用帝显 Cloud 进行文档解析'
         },
         paddleocr_vl_cloud: {
           name: 'PaddleOCR-VL Cloud',
@@ -2140,8 +2140,8 @@ export default {
     pinned: '已置顶'
   },
   platform: {
-    subtitle: '大模型驱动的企业级知识框架',
-    description: 'RAG 检索、智能体推理、Wiki 知识库，让文档真正被理解和运用',
+    subtitle: '帝显企业知识平台',
+    description: '面向 LED 背光源、TPM 触显全贴合与 EMS 电子制造业务的知识管理与智能问答',
     rag: 'RAG 增强生成',
     agent: 'ReAct 智能体',
     wiki: 'Wiki 知识库',
@@ -2521,9 +2521,9 @@ export default {
     loadingInfo: '正在加载信息...',
     retry: '重试',
     versionLabel: '应用版本',
-    versionDescription: '当前应用服务（weknora-app）的版本号',
+    versionDescription: '当前应用服务的版本号',
     frontendVersionLabel: 'UI 版本',
-    frontendVersionDescription: '当前 UI 界面（weknora-ui）的构建版本号',
+    frontendVersionDescription: '当前帝显 UI 界面的构建版本号',
     versionMismatch: '与应用版本不一致',
     buildTimeLabel: '构建时间',
     buildTimeDescription: '系统构建的时间',
@@ -4060,8 +4060,8 @@ export default {
     allowFileUpload: '显示文件上传',
     allowFileUploadDesc: '开启后，访客可上传图片与文档附件。仅当绑定的智能体已启用图片上传时才会生效。',
     webhookUrl: 'Webhook 地址',
-    webhookUrlPlaceholder: 'https://your-server.example.com/weknora/embed-events',
-    webhookUrlDesc: '可选。访客发消息与助手回复完成时，WeKnora 会向该 HTTPS 地址 POST 事件（message_sent / message_received）。',
+    webhookUrlPlaceholder: 'https://your-server.example.com/dixian/embed-events',
+    webhookUrlDesc: '可选。访客发消息与助手回复完成时，帝显会向该 HTTPS 地址 POST 事件（message_sent / message_received）。',
     webhookSecret: 'Webhook 签名密钥',
     webhookSecretPlaceholder: '用于 HMAC-SHA256 签名（X-WeKnora-Signature）',
     webhookSecretKeep: '留空表示不修改已保存的密钥',
@@ -4174,7 +4174,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Hi，我是 WeKnora，让你的知识触手可及',
+    title: 'Hi，我是帝显，让你的业务知识触手可及',
     newSessionTitle: '新会话',
     messages: {
       createFailed: '创建会话失败',
@@ -4418,11 +4418,11 @@ export default {
     haveAccount: '已有账户？',
     backToLogin: '返回登录',
     loginHint: '登录以继续使用；首次使用请在下方创建账户。',
-    firstTime: '首次使用 WeKnora？',
+    firstTime: '首次使用帝显？',
     registerSuccess: '注册成功，请登录',
     registerFailed: '注册失败',
-    subtitle: 'RAG 问答、ReAct 智能体与 Wiki 知识库，大模型驱动的企业级知识框架',
-    registerSubtitle: '创建账户并开始使用 WeKnora',
+    subtitle: '面向工业、汽车与电子制造业务的企业知识平台',
+    registerSubtitle: '创建账户并开始使用帝显',
     emailPlaceholder: '输入邮箱地址',
     passwordPlaceholder: '输入密码（8-32个字符，包含字母和数字）',
     confirmPasswordPlaceholder: '再次输入密码',
@@ -4678,8 +4678,8 @@ export default {
       needsConfig: '需要配置',
       configurable: '可配置',
       pathPrefix: '路径前缀（可选）',
-      pathPrefixPlaceholder: '如 weknora/images',
-      prefixPlaceholder: '如 weknora',
+      pathPrefixPlaceholder: '如 dixian/images',
+      prefixPlaceholder: '如 dixian',
       bucketName: 'Bucket 名称',
       bucketPlaceholder: '存储桶名称',
       minioDesc: 'S3 兼容的自托管对象存储，适合内网和私有云部署。',
@@ -4824,47 +4824,47 @@ export default {
       paddleocrVlCloudTokenPlaceholder: 'PaddleOCR-VL 飞桨星河社区 Token'
     },
     weknoraCloud: {
-      title: 'WeKnora Cloud',
-      description: '配置 WeKnora Cloud 的 APPID 和 APPSECRET 凭证。凭证用于模型服务和文档解析引擎。',
+      title: '帝显 Cloud',
+      description: '配置帝显 Cloud 的 APPID 和 APPSECRET 凭证。凭证用于模型服务和文档解析引擎。',
       viewDocs: '查看文档',
       unconfigured: '尚未配置凭证，请填写 APPID 和 APPSECRET',
       configured: '凭证已配置，状态正常',
-      expired: 'WeKnora Cloud 凭证已失效',
+      expired: '帝显 Cloud 凭证已失效',
       expiredDefault: '服务重启后加密密钥已变更，已保存的凭证无法解密。请重新填写凭证。',
       reconfigure: '重新配置',
       appIdLabel: 'APPID',
-      appIdDesc: 'WeKnora Cloud 的应用 ID',
+      appIdDesc: '帝显 Cloud 的应用 ID',
       appIdPlaceholder: '请输入 APPID',
       appSecretLabel: 'APPSECRET',
-      appSecretDesc: 'WeKnora Cloud 的应用密钥',
+      appSecretDesc: '帝显 Cloud 的应用密钥',
       appSecretPlaceholder: '请输入 APPSECRET',
       saveHint: '保存后将验证服务可达性并加密存储凭证',
       saveBtn: '保存凭证',
       usageTitle: '使用说明',
-      usageSteps: '1. 填写并保存 APPID / APPSECRET\n2. 在下方「云模型接入」中按行添加 chat、embedding、rerank、vlm\n3. 文档解析：知识库设置 → 解析引擎，选择 WeKnora Cloud 引擎',
+      usageSteps: '1. 填写并保存 APPID / APPSECRET\n2. 在下方「云模型接入」中按行添加 chat、embedding、rerank、vlm\n3. 文档解析：知识库设置 → 解析引擎，选择帝显 Cloud 引擎',
       fillRequired: '请填写 APPID 和 APPSECRET',
       saveSuccess: '凭证保存成功',
       saveFailed: '凭证保存失败',
-      credentialConfigured: 'WeKnoraCloud 凭证已配置',
+      credentialConfigured: '帝显 Cloud 凭证已配置',
       credentialExpired: '凭证已失效，请重新配置。',
-      credentialUnconfigured: '尚未配置 WeKnoraCloud 凭证，请先填写 APPID 和 APPSECRET。',
+      credentialUnconfigured: '尚未配置帝显 Cloud 凭证，请先填写 APPID 和 APPSECRET。',
       checkingStatus: '正在检查凭证状态...',
       goToSettings: '前往设置中配置',
-      modelHintConfigured: 'WeKnoraCloud 凭证已配置。支持的模型可参考',
+      modelHintConfigured: '帝显 Cloud 凭证已配置。支持的模型可参考',
       modelHintDocsLink: '接口文档',
       addModelsSuccess: '已成功添加 {count} 个模型',
       addModelsPartial: '已添加 {success} 个，{failed} 个失败',
       addModelsFailed: '添加模型失败',
       addModelsEmbeddingFailed: 'Embedding 模型连接测试失败，无法获取向量维度',
       addModelsDisplayName: {
-        chat: 'WeKnoraCloud 对话',
-        embedding: 'WeKnoraCloud Embedding',
-        rerank: 'WeKnoraCloud ReRank',
-        vllm: 'WeKnoraCloud 视觉'
+        chat: '帝显 Cloud 对话',
+        embedding: '帝显 Cloud Embedding',
+        rerank: '帝显 Cloud ReRank',
+        vllm: '帝显 Cloud 视觉'
       },
       modelsSection: {
         title: '云模型接入',
-        descReady: '将 WeKnora Cloud 提供的四类标准模型注册到当前空间，用于对话、向量检索、重排序与多模态理解。',
+        descReady: '将帝显 Cloud 提供的四类标准模型注册到当前空间，用于对话、向量检索、重排序与多模态理解。',
         descPending: '请先保存上方凭证，再在此添加云模型。',
         statusAdded: '已添加',
         statusPending: '待配置凭证',
@@ -5856,10 +5856,10 @@ export default {
       },
       knowledge: {
         title: '创建你的知识库',
-        desc: '知识库是一切的起点：上传文档、网页或 FAQ，WeKnora 会自动解析并建立索引。点击这里进入知识库。'
+        desc: '知识库是一切的起点：上传文档、网页或 FAQ，帝显会自动解析并建立索引。点击这里进入知识库。'
       },
       welcome: {
-        title: '欢迎使用 WeKnora',
+        title: '欢迎使用帝显',
         desc: '只需几步，带你快速了解知识库、对话与智能体的核心用法。点击「下一步」开始。'
       }
     }

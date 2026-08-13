@@ -269,8 +269,8 @@ export default {
     filterByAgentWithName: 'Фильтр по агенту: {name}',
     filterAllAgents: 'Все агенты',
     claw: {
-      title: 'WeKnora Skill',
-      subtitle: 'Импорт документов и гибридный поиск (вектор + ключевые слова) через REST API WeKnora — загрузки, URL, Markdown и поиск.',
+      title: 'dixian Skill',
+      subtitle: 'Импорт документов и гибридный поиск (вектор + ключевые слова) через REST API dixian — загрузки, URL, Markdown и поиск.',
       capabilitiesTitle: 'Возможности Skill',
       stepsTitle: 'Шаги настройки',
       openApiSettings: 'Открыть API-информацию',
@@ -279,7 +279,7 @@ export default {
       copyCmdSuccess: 'Команда установки скопирована',
       ecosystemNote: 'Skill размещён на ClawHub ({\'@\'}lyingbug/weknora). Полная документация API — на странице ClawHub.',
       installCta: 'Открыть ClawHub',
-      installCtaHint: 'Установка WeKnora Skill · откроется в новой вкладке',
+      installCtaHint: 'Установка dixian Skill · откроется в новой вкладке',
       hubMeta: 'ClawHub · {\'@\'}lyingbug/weknora · MIT-0',
       steps: {
         verify: {
@@ -324,7 +324,7 @@ export default {
     },
     chrome: {
       title: 'Помощник по знаниям',
-      subtitle: 'Для self-hosted WeKnora: вопросы в боковой панели, клиппинг страниц и Markdown-заметки в базы знаний прямо при просмотре.',
+      subtitle: 'Для self-hosted dixian: вопросы в боковой панели, клиппинг страниц и Markdown-заметки в базы знаний прямо при просмотре.',
       capabilitiesTitle: 'Возможности',
       stepsTitle: 'Шаги настройки',
       openApiSettings: 'Открыть API-информацию',
@@ -344,7 +344,7 @@ export default {
         },
         port: {
           title: 'Десктоп: фиксированный порт',
-          desc: 'В WeKnora Desktop задайте фиксированный порт API (например 37841) в API-информации.'
+          desc: 'В dixian Desktop задайте фиксированный порт API (например 37841) в API-информации.'
         },
         api: {
           title: 'Получите API-учётные данные',
@@ -432,7 +432,7 @@ export default {
       capabilityMessageHistory: 'История сообщений',
       capabilityMessageHistoryHint: 'Позволяет искать историю чатов пространства и читать статистику истории. Не даёт доступ к настройкам пространства.',
       capabilityManageModels: 'Управление моделями',
-      capabilityManageModelsHint: 'Управление конфигурациями моделей, учётными данными, проверками подключения и данными WeKnoraCloud.',
+      capabilityManageModelsHint: 'Управление конфигурациями моделей, учётными данными, проверками подключения и данными dixian Cloud.',
       capabilityManageMcpServices: 'Управление MCP-сервисами',
       capabilityManageMcpServicesHint: 'Управление MCP-сервисами, учётными данными, политиками подтверждения инструментов и OAuth-состоянием этого субъекта.',
       capabilityManageDatasources: 'Управление источниками данных',
@@ -474,14 +474,14 @@ export default {
       directWarning: 'Прямой ID доверяет заголовку вызывающей стороны. Используйте только для доверенных server-to-server вызовов.',
       directWarningDetail: 'Любой, у кого есть API key, может подменить заголовок ID пользователя, выдать себя за другого внешнего пользователя и переиспользовать или перехватить его авторизацию MCP OAuth. Не используйте в браузере или ненадёжных клиентах; для пользовательских приложений выбирайте подписанный token.',
       signedRecommended: 'Рекомендуется для пользовательских приложений: ваш backend подписывает краткоживущий HS256 JWT для внешнего пользователя.',
-      signedFlowDetail: 'HMAC secret храните только в WeKnora и на доверенном backend — не передавайте в запросах и не отдавайте браузеру. В заголовке запроса передаётся JWT, подписанный этим secret (меняется при каждой выдаче или после истечения), а не сам secret. JWT должен содержать sub (ID внешнего пользователя), tenant_id, aud=weknora и exp (не более 24 ч).',
+      signedFlowDetail: 'HMAC secret храните только в dixian и на доверенном backend — не передавайте в запросах и не отдавайте браузеру. В заголовке запроса передаётся JWT, подписанный этим secret (меняется при каждой выдаче или после истечения), а не сам secret. JWT должен содержать sub (ID внешнего пользователя), tenant_id, aud=weknora и exp (не более 24 ч).',
       directHeader: 'Заголовок ID пользователя',
       requireDirectHeader: 'Требовать заголовок ID пользователя',
       requireDirectHeaderDesc: 'Если включено, запросы без заголовка ID пользователя отклоняются; иначе все запросы обрабатываются как единое пространство без различия конечных пользователей.',
       tokenHeader: 'Заголовок token',
       tokenHeaderDesc: 'Клиент передаёт JWT, подписанный backend, в этом фиксированном заголовке.',
       hmacSecret: 'HMAC secret',
-      hmacSecretDesc: 'Тот же secret, что в WeKnora; только для подписи JWT на backend — не отправляйте его в заголовке запроса.',
+      hmacSecretDesc: 'Тот же secret, что в dixian; только для подписи JWT на backend — не отправляйте его в заголовке запроса.',
       secretConfigured: 'Secret настроен (повторно не показывается); введите новое значение для ротации',
       secretSavedCopyHint: 'Secret сохранён. Скопируйте его в backend сейчас — после ухода со страницы просмотреть его будет нельзя.',
       generateSecret: 'Сгенерировать secret',
@@ -1340,8 +1340,8 @@ export default {
           desc: 'Конвертер Microsoft MarkItDown (PDF/Office/HTML и др.)'
         },
         weknoracloud: {
-          name: 'WeKnora Cloud',
-          desc: 'Парсинг документов через WeKnora Cloud'
+          name: 'dixian Cloud',
+          desc: 'Парсинг документов через dixian Cloud'
         },
         paddleocr_vl_cloud: {
           name: 'PaddleOCR-VL Cloud',
@@ -2521,9 +2521,9 @@ export default {
     loadingInfo: 'Загрузка данных...',
     retry: 'Повторить',
     versionLabel: 'Версия приложения',
-    versionDescription: 'Версия сервиса приложения (weknora-app)',
+    versionDescription: 'Версия сервиса приложения',
     frontendVersionLabel: 'Версия UI',
-    frontendVersionDescription: 'Версия сборки UI (weknora-ui)',
+    frontendVersionDescription: 'Версия сборки dixian UI',
     versionMismatch: 'Не совпадает с версией приложения',
     buildTimeLabel: 'Время сборки',
     buildTimeDescription: 'Время, когда система была собрана',
@@ -4060,8 +4060,8 @@ export default {
     allowFileUpload: 'Показывать кнопку загрузки изображений',
     allowFileUploadDesc: 'При включении посетители видят кнопку загрузки изображений в поле ввода. Кнопка появляется только если у привязанного агента включена загрузка изображений.',
     webhookUrl: 'Webhook URL',
-    webhookUrlPlaceholder: 'https://your-server.example.com/weknora/embed-events',
-    webhookUrlDesc: 'Optional. WeKnora POSTs message_sent / message_received events to this HTTPS endpoint.',
+    webhookUrlPlaceholder: 'https://your-server.example.com/dixian/embed-events',
+    webhookUrlDesc: 'Optional. dixian POSTs message_sent / message_received events to this HTTPS endpoint.',
     webhookSecret: 'Webhook secret',
     webhookSecretPlaceholder: 'HMAC-SHA256 secret (X-WeKnora-Signature header)',
     webhookSecretKeep: 'Leave blank to keep the saved secret',
@@ -4174,7 +4174,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Привет, я WeKnora — ваши знания всегда под рукой',
+    title: 'Привет, я dixian — ваши знания всегда под рукой',
     newSessionTitle: 'Новая сессия',
     messages: {
       createFailed: 'Не удалось создать сессию',
@@ -4418,11 +4418,11 @@ export default {
     haveAccount: 'Уже есть аккаунт?',
     backToLogin: 'Вернуться ко входу',
     loginHint: 'Войдите, чтобы продолжить, или создайте аккаунт ниже, если вы впервые здесь.',
-    firstTime: 'Впервые в WeKnora?',
+    firstTime: 'Впервые в dixian?',
     registerSuccess: 'Регистрация завершена. Войдите в систему',
     registerFailed: 'Ошибка регистрации',
     subtitle: 'RAG, ReAct-агент и Wiki — корпоративный фреймворк знаний на основе больших моделей',
-    registerSubtitle: 'Создайте аккаунт и начните работу с WeKnora',
+    registerSubtitle: 'Создайте аккаунт и начните работу с dixian',
     emailPlaceholder: 'Введите адрес электронной почты',
     passwordPlaceholder: 'Введите пароль (8-32 символа, включая буквы и цифры)',
     confirmPasswordPlaceholder: 'Введите пароль ещё раз',
@@ -4678,8 +4678,8 @@ export default {
       needsConfig: 'Требует настройки',
       configurable: 'Настраиваемое',
       pathPrefix: 'Префикс пути (необязательно)',
-      pathPrefixPlaceholder: 'напр. weknora/images',
-      prefixPlaceholder: 'напр. weknora',
+      pathPrefixPlaceholder: 'напр. dixian/images',
+      prefixPlaceholder: 'напр. dixian',
       bucketName: 'Имя бакета',
       bucketPlaceholder: 'Имя бакета',
       minioDesc: 'S3-совместимое самостоятельно размещаемое объектное хранилище для внутренних сетей и частного облака.',
@@ -4824,47 +4824,47 @@ export default {
       paddleocrVlCloudTokenPlaceholder: 'Токен PaddleOCR-VL AI Studio'
     },
     weknoraCloud: {
-      title: 'WeKnora Cloud',
-      description: 'Настройте учётные данные APPID и APPSECRET для WeKnora Cloud. Данные используются для модельных сервисов и движка парсинга документов.',
+      title: 'dixian Cloud',
+      description: 'Настройте учётные данные APPID и APPSECRET для dixian Cloud. Данные используются для модельных сервисов и движка парсинга документов.',
       viewDocs: 'Документация',
       unconfigured: 'Учётные данные не настроены. Заполните APPID и APPSECRET.',
       configured: 'Учётные данные настроены, статус в норме.',
-      expired: 'Учётные данные WeKnora Cloud истекли',
+      expired: 'Учётные данные dixian Cloud истекли',
       expiredDefault: 'Ключ шифрования изменился после перезапуска. Сохранённые данные не могут быть расшифрованы. Введите данные заново.',
       reconfigure: 'Перенастроить',
       appIdLabel: 'APPID',
-      appIdDesc: 'ID приложения WeKnora Cloud',
+      appIdDesc: 'ID приложения dixian Cloud',
       appIdPlaceholder: 'Введите APPID',
       appSecretLabel: 'APPSECRET',
-      appSecretDesc: 'Секрет приложения WeKnora Cloud',
+      appSecretDesc: 'Секрет приложения dixian Cloud',
       appSecretPlaceholder: 'Введите APPSECRET',
       saveHint: 'Данные будут проверены и зашифрованы перед сохранением.',
       saveBtn: 'Сохранить',
       usageTitle: 'Инструкция',
-      usageSteps: '1. Сохраните APPID и APPSECRET\n2. Добавьте chat, embedding, rerank и vlm в разделе «Облачные модели» ниже\n3. Парсинг: Настройки БЗ → Движок парсинга → WeKnora Cloud',
+      usageSteps: '1. Сохраните APPID и APPSECRET\n2. Добавьте chat, embedding, rerank и vlm в разделе «Облачные модели» ниже\n3. Парсинг: Настройки БЗ → Движок парсинга → dixian Cloud',
       fillRequired: 'Заполните APPID и APPSECRET',
       saveSuccess: 'Учётные данные сохранены',
       saveFailed: 'Не удалось сохранить данные',
-      credentialConfigured: 'Учётные данные WeKnoraCloud настроены.',
+      credentialConfigured: 'Учётные данные dixian Cloud настроены.',
       credentialExpired: 'Данные истекли. Перенастройте.',
-      credentialUnconfigured: 'Учётные данные WeKnoraCloud не настроены. Заполните APPID и APPSECRET.',
+      credentialUnconfigured: 'Учётные данные dixian Cloud не настроены. Заполните APPID и APPSECRET.',
       checkingStatus: 'Проверка статуса...',
       goToSettings: 'Перейти в настройки',
-      modelHintConfigured: 'Учётные данные WeKnoraCloud настроены. Поддерживаемые модели см. в',
+      modelHintConfigured: 'Учётные данные dixian Cloud настроены. Поддерживаемые модели см. в',
       modelHintDocsLink: 'документации API',
       addModelsSuccess: 'Успешно добавлено моделей: {count}',
       addModelsPartial: 'Добавлено: {success}, ошибок: {failed}',
       addModelsFailed: 'Не удалось добавить модели',
       addModelsEmbeddingFailed: 'Тест подключения Embedding не пройден; не удалось определить размерность вектора',
       addModelsDisplayName: {
-        chat: 'WeKnoraCloud Chat',
-        embedding: 'WeKnoraCloud Embedding',
-        rerank: 'WeKnoraCloud ReRank',
-        vllm: 'WeKnoraCloud Vision'
+        chat: 'dixian Cloud Chat',
+        embedding: 'dixian Cloud Embedding',
+        rerank: 'dixian Cloud ReRank',
+        vllm: 'dixian Cloud Vision'
       },
       modelsSection: {
         title: 'Облачные модели',
-        descReady: 'Зарегистрируйте четыре стандартные модели WeKnora Cloud для чата, поиска, реранкинга и зрения.',
+        descReady: 'Зарегистрируйте четыре стандартные модели dixian Cloud для чата, поиска, реранкинга и зрения.',
         descPending: 'Сначала сохраните учётные данные выше, затем добавьте модели здесь.',
         statusAdded: 'Добавлена',
         statusPending: 'Нужны учётные данные',
@@ -5856,10 +5856,10 @@ export default {
       },
       knowledge: {
         title: 'Создайте базу знаний',
-        desc: 'С этого всё начинается: загружайте документы, веб-страницы или FAQ, и WeKnora автоматически разберёт и проиндексирует их. Нажмите здесь, чтобы открыть базы знаний.'
+        desc: 'С этого всё начинается: загружайте документы, веб-страницы или FAQ, и dixian автоматически разберёт и проиндексирует их. Нажмите здесь, чтобы открыть базы знаний.'
       },
       welcome: {
-        title: 'Добро пожаловать в WeKnora',
+        title: 'Добро пожаловать в dixian',
         desc: 'Несколько простых шагов познакомят вас с базами знаний, чатом и агентами. Нажмите «Далее», чтобы начать.'
       }
     }

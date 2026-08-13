@@ -1,4 +1,5 @@
-*
-!dist
-!nginx.conf
-!docker-entrypoint.sh
+node_modules/
+.git/
+.DS_Store
+*.log
+coverage/

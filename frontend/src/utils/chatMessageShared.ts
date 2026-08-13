@@ -1,5 +1,6 @@
 import i18n from '@/i18n';
 import { buildMermaidBlockHtml, buildMermaidLoadingHtml } from '@/utils/markdownEnhancements';
+import { sanitizeUserVisibleBrandText } from '@/utils/productBrand';
 
 const STREAMING_IMAGE_PLACEHOLDER = '<span class="streaming-image-loading"><span class="streaming-image-loading__skeleton"></span></span>';
 const STREAMING_MERMAID_PLACEHOLDER = buildMermaidLoadingHtml();
@@ -97,18 +98,19 @@ export const formatManualTitle = (question?: string): string => {
 };
 
 export const buildManualMarkdown = (_question: string, answer: string): string => {
-  const safeAnswer = answer?.trim() || i18n.global.t('chat.noAnswerContent');
+  const safeAnswer = sanitizeUserVisibleBrandText(answer).trim() || i18n.global.t('chat.noAnswerContent');
   return `${safeAnswer}`;
 };
 
 export const copyTextToClipboard = async (content: string): Promise<void> => {
+  const safeContent = sanitizeUserVisibleBrandText(content);
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(content);
+    await navigator.clipboard.writeText(safeContent);
     return;
   }
 
   const textArea = document.createElement('textarea');
-  textArea.value = content;
+  textArea.value = safeContent;
   textArea.style.position = 'fixed';
   textArea.style.opacity = '0';
   document.body.appendChild(textArea);

@@ -1,0 +1,15 @@
+# Railway source build for the Dixian document reader service.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "docker/Dockerfile.docreader"
+watchPatterns = [
+  "/docker/Dockerfile.docreader",
+  "/docreader/**",
+  "/packages/**",
+  "/railway/docreader.toml"
+]
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+drainingSeconds = 30

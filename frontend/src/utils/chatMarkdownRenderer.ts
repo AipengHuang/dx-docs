@@ -1,6 +1,7 @@
 import { marked, type Renderer } from 'marked'
 import markedKatex from 'marked-katex-extension'
 import type { Tokens } from 'marked'
+import { sanitizeUserVisibleBrandText } from './productBrand.ts'
 
 import {
   collapseStandaloneCitationParagraphs,
@@ -450,7 +451,7 @@ export function markStandaloneStrongParagraphs(html: string): string {
 }
 
 export function renderChatMarkdown(rawMarkdown: unknown, options: RenderChatMarkdownOptions): string {
-  const rawText = typeof rawMarkdown === 'string' ? rawMarkdown : String(rawMarkdown || '')
+  const rawText = sanitizeUserVisibleBrandText(rawMarkdown)
   if (!rawText.trim()) return ''
 
   configureMarkedForChatMarkdown()
