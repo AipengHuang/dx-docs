@@ -34,17 +34,14 @@ jobs:
     timeout-minutes: 30
     env:
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT_NAME: production
     steps:
       - uses: actions/checkout@v6
       - name: Install Railway CLI
         run: npm install --global @railway/cli@5.40.0
       - name: Deploy DocReader
-        run: >-
-          railway up --ci --yes
-          --project "${{ vars.RAILWAY_PROJECT_ID }}"
-          --environment production
-          --service dixian-docreader
-          --message "GitHub Actions ${GITHUB_SHA}"
+        run: ./scripts/railway-deploy-service.sh dixian-docreader
 
   deploy-app:
     name: Deploy API to Railway
@@ -54,17 +51,14 @@ jobs:
     timeout-minutes: 30
     env:
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT_NAME: production
     steps:
       - uses: actions/checkout@v6
       - name: Install Railway CLI
         run: npm install --global @railway/cli@5.40.0
       - name: Deploy API
-        run: >-
-          railway up --ci --yes
-          --project "${{ vars.RAILWAY_PROJECT_ID }}"
-          --environment production
-          --service dixian-app
-          --message "GitHub Actions ${GITHUB_SHA}"
+        run: ./scripts/railway-deploy-service.sh dixian-app
 
   deploy-frontend:
     name: Deploy frontend to Railway
@@ -74,17 +68,14 @@ jobs:
     timeout-minutes: 30
     env:
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT_NAME: production
     steps:
       - uses: actions/checkout@v6
       - name: Install Railway CLI
         run: npm install --global @railway/cli@5.40.0
       - name: Deploy frontend
-        run: >-
-          railway up --ci --yes
-          --project "${{ vars.RAILWAY_PROJECT_ID }}"
-          --environment production
-          --service dixian-ui
-          --message "GitHub Actions ${GITHUB_SHA}"
+        run: ./scripts/railway-deploy-service.sh dixian-ui
 
   production-smoke-test:
     name: Verify production endpoints
