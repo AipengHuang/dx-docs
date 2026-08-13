@@ -6,6 +6,12 @@ service_name="${1:?usage: railway-deploy-service.sh <service-name>}"
 project_id="${RAILWAY_PROJECT_ID:?RAILWAY_PROJECT_ID is required}"
 environment_name="${RAILWAY_ENVIRONMENT_NAME:-production}"
 
+if [[ -n "${RAILWAY_CONFIG_B64:-}" ]]; then
+  mkdir -p "$HOME/.railway"
+  printf '%s' "$RAILWAY_CONFIG_B64" | base64 --decode >"$HOME/.railway/config.json"
+  chmod 600 "$HOME/.railway/config.json"
+fi
+
 latest_deployment() {
   railway deployment list \
     --project "$project_id" \

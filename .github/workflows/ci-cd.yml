@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_CONFIG_B64: ${{ secrets.RAILWAY_CONFIG_B64 }}
       RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
       RAILWAY_ENVIRONMENT_NAME: production
     steps:
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_CONFIG_B64: ${{ secrets.RAILWAY_CONFIG_B64 }}
       RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
       RAILWAY_ENVIRONMENT_NAME: production
     steps:
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_CONFIG_B64: ${{ secrets.RAILWAY_CONFIG_B64 }}
       RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
       RAILWAY_ENVIRONMENT_NAME: production
     steps:
