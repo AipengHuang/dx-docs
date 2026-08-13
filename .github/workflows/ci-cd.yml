@@ -26,12 +26,82 @@ jobs:
     name: DocReader CI
     uses: ./.github/workflows/docreader.yml
 
-  railway-deployment-gate:
-    name: Railway deployment gate
-    needs: [app, frontend, docreader]
+  deploy-docreader:
+    name: Deploy DocReader to Railway
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [docreader]
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 30
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
     steps:
-      - name: Release production deployment
+      - uses: actions/checkout@v6
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli@5.40.0
+      - name: Deploy DocReader
+        run: >-
+          railway up --ci --yes
+          --project "${{ vars.RAILWAY_PROJECT_ID }}"
+          --environment production
+          --service dixian-docreader
+          --message "GitHub Actions ${GITHUB_SHA}"
+
+  deploy-app:
+    name: Deploy API to Railway
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [app]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli@5.40.0
+      - name: Deploy API
+        run: >-
+          railway up --ci --yes
+          --project "${{ vars.RAILWAY_PROJECT_ID }}"
+          --environment production
+          --service dixian-app
+          --message "GitHub Actions ${GITHUB_SHA}"
+
+  deploy-frontend:
+    name: Deploy frontend to Railway
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli@5.40.0
+      - name: Deploy frontend
+        run: >-
+          railway up --ci --yes
+          --project "${{ vars.RAILWAY_PROJECT_ID }}"
+          --environment production
+          --service dixian-ui
+          --message "GitHub Actions ${GITHUB_SHA}"
+
+  production-smoke-test:
+    name: Verify production endpoints
+    needs: [deploy-docreader, deploy-app, deploy-frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify API and frontend
         run: |
-          echo "All Dixian checks passed. Railway may deploy ${GITHUB_SHA}."
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error --max-time 10 \
+              https://dixian-app-production.up.railway.app/health >/dev/null \
+              && curl --fail --silent --show-error --max-time 10 \
+                https://dixian-ui-production.up.railway.app/ >/dev/null; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Dixian production endpoints did not become healthy in time." >&2
+          exit 1
