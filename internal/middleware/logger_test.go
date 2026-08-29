@@ -1,6 +1,34 @@
 package middleware
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+)
+
+func TestRequestIDPropagatesLogNumber(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(RequestID())
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	request := httptest.NewRequest(http.MethodGet, "/health", nil)
+	request.Header.Set("X-Request-ID", "request-1")
+	request.Header.Set("X-Log-Number", "LOG-01ARZ3NDEKTSV4RRFFQ69G5FAV")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if got := response.Header().Get("X-Request-ID"); got != "request-1" {
+		t.Fatalf("X-Request-ID = %q", got)
+	}
+	if got := response.Header().Get("X-Log-Number"); got != "LOG-01ARZ3NDEKTSV4RRFFQ69G5FAV" {
+		t.Fatalf("X-Log-Number = %q", got)
+	}
+}
 
 func TestSanitizeBody(t *testing.T) {
 	cases := []struct {
