@@ -59,6 +59,7 @@ ensure_frontend_dist() {
 
 pull_images() {
     compose_command pull app docreader postgres redis
+    compose_command --profile sandbox pull sandbox
 }
 
 build_frontend_image() {

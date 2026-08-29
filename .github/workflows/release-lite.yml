@@ -364,14 +364,9 @@ jobs:
 
           # 2. 配置
           cp .env.lite.example .env.lite
-          # 编辑 .env.lite，至少确认 OLLAMA_BASE_URL 正确
+          # 3. Configure a remote model provider in .env.lite
 
-          # 3. 启动 Ollama（如尚未运行）
-          ollama serve &
-          ollama pull qwen2.5:7b
-          ollama pull nomic-embed-text
-
-          # 4. 运行
+          # 4. Run
           set -a && source .env.lite && set +a
           ./WeKnora-lite
           # 访问 http://localhost:8080

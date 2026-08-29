@@ -217,7 +217,8 @@ See [`cli/README.md`](./cli/README.md) for install + 5-minute quickstart and
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
 cp .env.example .env   # Edit .env as needed, see comments in the file
-./scripts/start_all.sh  # Pull/build and start core services
+docker compose pull     # Pull the latest images
+docker compose up -d    # Start core services
 ```
 
 Once started, visit **http://localhost** to get started.

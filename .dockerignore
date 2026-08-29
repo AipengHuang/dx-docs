@@ -68,7 +68,6 @@ packages/protoc-*.zip
 !packages/protoc-*-linux-arm.zip
 
 # 本地测试脚本
-configure-ollama.sh
 fix-docker.sh
 /scripts/scale_dev_jobs.sh
 
