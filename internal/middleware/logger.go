@@ -49,6 +49,8 @@ var sensitiveFieldRegex = regexp.MustCompile(
 		`authorization[_-]?url|authorization[_-]?attempt)")\s*:\s*"[^"]*"`,
 )
 
+var logNumberRegex = regexp.MustCompile(`^LOG-[0-7][0-9A-HJKMNP-TV-Z]{25}$`)
+
 // sanitizeBody 清理敏感信息
 func sanitizeBody(body string) string {
 	return sensitiveFieldRegex.ReplaceAllString(body, `$1:"***"`)
@@ -128,8 +130,16 @@ func RequestID() gin.HandlerFunc {
 			requestID = uuid.New().String()
 		}
 		safeRequestID := secutils.SanitizeForLog(requestID)
+		logNumber := c.GetHeader("X-Log-Number")
+		if !logNumberRegex.MatchString(logNumber) {
+			logNumber = ""
+		}
 		// Set request ID in header
 		c.Header("X-Request-ID", requestID)
+		if logNumber != "" {
+			c.Header("X-Log-Number", logNumber)
+			c.Set("log_number", logNumber)
+		}
 
 		// Set request ID in context
 		c.Set(types.RequestIDContextKey.String(), requestID)
@@ -137,6 +147,9 @@ func RequestID() gin.HandlerFunc {
 		// Set logger in context
 		requestLogger := logger.GetLogger(c)
 		requestLogger = requestLogger.WithField("request_id", safeRequestID)
+		if logNumber != "" {
+			requestLogger = requestLogger.WithField("log_number", logNumber)
+		}
 		c.Set(types.LoggerContextKey.String(), requestLogger)
 
 		// Set request ID in the global context for logging

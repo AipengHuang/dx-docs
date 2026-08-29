@@ -1,0 +1,2569 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Dixian Platform API Core Contract",
+    "version": "1.0.0",
+    "description": "Normative v1 contract for identifiers, request context, errors, cursor pagination, writes, SSE and browser-facing platform APIs."
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Browser-facing NestJS authority"
+    },
+    {
+      "url": "/internal/v1",
+      "description": "Private service boundary"
+    }
+  ],
+  "paths": {
+    "/me/permissions": {
+      "get": {
+        "operationId": "getMyPermissions",
+        "summary": "Return the current user's effective permissions and per-assignment scopes",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Effective permission projection; an unassigned user receives an empty array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionProjectionResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/me/navigation": {
+      "get": {
+        "operationId": "getMyNavigation",
+        "summary": "Return navigation entries already filtered by server-side authorization",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Authorized navigation projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationProjectionResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/me/agents": {
+      "get": {
+        "operationId": "getMyAgentPermissions",
+        "summary": "Return only the current user's Agent action permissions and scopes",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Agent discover, view, chat, history, manage, configure, test and publish projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionProjectionResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/me/skills": {
+      "get": {
+        "operationId": "getMySkillPermissions",
+        "summary": "Return only the current user's Skill action permissions and scopes",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Skill discover, view, invoke, maintain and publish projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionProjectionResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/portal/tree": {
+      "get": {
+        "operationId": "getPortalResourceTree",
+        "summary": "Return the current user's server-filtered four-level portal tree",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Authorized company, department, module and Agent tree",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PortalTree" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/portal/search": {
+      "get": {
+        "operationId": "searchPortalResources",
+        "summary": "Search only portal resources visible to the current user",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "maxLength": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized search result in four-level tree form",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PortalTree" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid search query",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/portal/agents/{resource_key}": {
+      "get": {
+        "operationId": "getPortalAgent",
+        "summary": "Resolve an authorized active or archived Agent for an existing conversation",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PortalResourceKey" }],
+        "responses": {
+          "200": {
+            "description": "Authorized Agent detail including previous names",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PortalAgentDetail" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" }
+        }
+      },
+      "patch": {
+        "operationId": "updatePortalAgent",
+        "summary": "Configure, reorder, enable or archive an authorized Agent",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PortalResourceKey" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PortalResourcePatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated Agent configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalResourceConfiguration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid resource configuration",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" }
+        }
+      }
+    },
+    "/portal/agents/{resource_key}/favorite": {
+      "put": {
+        "operationId": "setPortalAgentFavorite",
+        "summary": "Set the current user's favorite state for an authorized active Agent",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PortalResourceKey" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PortalFavoriteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Favorite state saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalFavoriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid favorite state",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" }
+        }
+      }
+    },
+    "/portal/agents/{resource_key}/visit": {
+      "post": {
+        "operationId": "recordPortalAgentVisit",
+        "summary": "Record recent use for an authorized active Agent",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PortalResourceKey" }],
+        "responses": {
+          "200": {
+            "description": "Visit recorded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PortalVisitResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" }
+        }
+      }
+    },
+    "/portal/departments/{resource_key}": {
+      "patch": {
+        "operationId": "updatePortalDepartment",
+        "summary": "Configure, reorder, enable or archive an authorized department",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PortalResourceKey" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PortalResourcePatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated department configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalResourceConfiguration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid resource configuration",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" }
+        }
+      }
+    },
+    "/portal/modules/{resource_key}": {
+      "patch": {
+        "operationId": "updatePortalModule",
+        "summary": "Configure, reorder, enable or archive an authorized module",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PortalResourceKey" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PortalResourcePatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated module configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalResourceConfiguration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid resource configuration",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" }
+        }
+      }
+    },
+    "/rbac/permissions": {
+      "get": {
+        "operationId": "listRbacPermissions",
+        "summary": "List the read-only permission dictionary",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Permission definitions visible to an authorization administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RbacPermissionListResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/rbac/roles": {
+      "get": {
+        "operationId": "listRbacRoles",
+        "summary": "List roles with permissions, defaults, version and affected users",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "maxLength": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized role list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RbacRoleListResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createRbacRole",
+        "summary": "Create an audited role without a deployment",
+        "security": [{ "SessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RbacRoleCreateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created role",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RbacRole" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/rbac/roles/{role_code}/copy": {
+      "post": {
+        "operationId": "copyRbacRole",
+        "summary": "Copy a role and its permission and default scope configuration",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RoleCode" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RbacRoleCopyRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Copied role",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RbacRole" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/rbac/roles/{role_code}": {
+      "put": {
+        "operationId": "updateRbacRole",
+        "summary": "Update a role using optimistic version control",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RoleCode" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RbacRoleUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated role",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RbacRole" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/rbac/users": {
+      "get": {
+        "operationId": "listRbacUsers",
+        "summary": "List organization users for role assignment",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "maxLength": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized user list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RbacUserListResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/rbac/users/{user_id}/assignments": {
+      "get": {
+        "operationId": "getRbacUserAssignments",
+        "summary": "Explain a user's role sources, scopes, validity and effective permissions",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/UserId" }],
+        "responses": {
+          "200": {
+            "description": "Role assignment explanation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAssignmentsResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/rbac/assignments": {
+      "post": {
+        "operationId": "assignRbacRoles",
+        "summary": "Batch assign a direct or automatically expiring scoped role",
+        "security": [{ "SessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAssignmentBatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created assignments and any acknowledged risk warnings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentBatchResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/rbac/assignments/{assignment_id}": {
+      "delete": {
+        "operationId": "revokeRbacAssignment",
+        "summary": "Revoke only the selected assignment source",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AssignmentId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReasonRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Assignment revoked" },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/rbac/default-role-mappings": {
+      "get": {
+        "operationId": "listDefaultRoleMappings",
+        "summary": "List department and position default role mappings",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Active default role mappings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultRoleMappingListResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createDefaultRoleMapping",
+        "summary": "Create a default role mapping and reconcile matching users",
+        "security": [{ "SessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefaultRoleMappingCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created mapping",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DefaultRoleMapping" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/rbac/default-role-mappings/{mapping_id}": {
+      "delete": {
+        "operationId": "archiveDefaultRoleMapping",
+        "summary": "Archive a default mapping and revoke only its derived assignments",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/MappingId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReasonRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Mapping archived" },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/rbac/simulations": {
+      "post": {
+        "operationId": "simulateRbacPermissions",
+        "summary": "Read-only before and after authorization simulation using runtime scope rules",
+        "security": [{ "SessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RbacSimulationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Read-only authorization simulation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RbacSimulationResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" }
+        }
+      }
+    },
+    "/rbac/proposals": {
+      "get": {
+        "operationId": "listOwnPermissionChangeProposals",
+        "summary": "List permission proposals created by the current user",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Current user's permission proposals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionProposalListResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/rbac/proposals/suggest": {
+      "post": {
+        "operationId": "suggestPermissionChangeProposal",
+        "summary": "Convert a narrow natural-language permission request into a draft proposal",
+        "security": [{ "SessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionProposalSuggestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft proposal; no authorization data has changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionChangeProposal"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/rbac/proposals/{proposal_id}/confirm": {
+      "post": {
+        "operationId": "confirmPermissionChangeProposal",
+        "summary": "Confirm a draft owned by the current requester",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProposalId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionProposalConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Confirmed proposal or proposal pending independent approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionChangeProposal"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/rbac/proposals/{proposal_id}/decision": {
+      "post": {
+        "operationId": "decidePermissionChangeProposal",
+        "summary": "Apply an independent approval decision to a high-risk proposal",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProposalId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionProposalDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded approval decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionChangeProposal"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/rbac/proposals/{proposal_id}/execute": {
+      "post": {
+        "operationId": "executePermissionChangeProposal",
+        "summary": "Execute exactly one confirmed and, when required, approved proposal",
+        "security": [{ "SessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProposalId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReasonRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Executed proposal and created role assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionChangeProposal"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/HiddenNotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/rbac/audit-events": {
+      "get": {
+        "operationId": "listAuthorizationChangeAuditEvents",
+        "summary": "List append-only authorization change audit events",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Most recent authorization changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizationChangeAuditListResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Uuid": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "description": "Opaque UUID v4. Resource identifiers are never reused."
+      },
+      "TraceId": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{32}$",
+        "minLength": 32,
+        "maxLength": 32,
+        "not": {
+          "const": "00000000000000000000000000000000"
+        },
+        "description": "W3C trace-id. All-zero values are invalid."
+      },
+      "LogNumber": {
+        "type": "string",
+        "pattern": "^LOG-[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+        "example": "LOG-01ARZ3NDEKTSV4RRFFQ69G5FAV",
+        "description": "Server-issued LOG- prefixed ULID. Globally unique, immutable, non-reusable and free of business metadata."
+      },
+      "IdentitySource": {
+        "type": "string",
+        "enum": ["wecom", "oidc", "local"]
+      },
+      "ScopeKind": {
+        "type": "string",
+        "enum": ["company", "department", "module", "agent", "project", "self"]
+      },
+      "DeviceChannel": {
+        "type": "string",
+        "enum": ["web", "wecom", "api", "service"]
+      },
+      "ScopeRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "resource_id", "actions"],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ScopeKind"
+          },
+          "resource_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        }
+      },
+      "DeviceContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["channel"],
+        "properties": {
+          "channel": {
+            "$ref": "#/components/schemas/DeviceChannel"
+          },
+          "device_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "user_agent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "RequestContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-dixian-authority": "platform",
+        "required": [
+          "request_id",
+          "trace_id",
+          "log_number",
+          "tenant_id",
+          "user_id",
+          "identity_source",
+          "effective_role_assignment_ids",
+          "scope",
+          "device",
+          "ip_address"
+        ],
+        "properties": {
+          "request_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "trace_id": {
+            "$ref": "#/components/schemas/TraceId"
+          },
+          "log_number": {
+            "$ref": "#/components/schemas/LogNumber"
+          },
+          "tenant_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "user_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "identity_source": {
+            "$ref": "#/components/schemas/IdentitySource"
+          },
+          "effective_role_assignment_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "description": "Authoritative role-assignment references, not caller-supplied role names."
+          },
+          "scope": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScopeRef"
+            }
+          },
+          "department_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "module_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "project_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "conversation_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "run_context_id": {
+            "$ref": "#/components/schemas/Uuid",
+            "description": "Opaque short-lived server-side run context reference. It is not a signed grant."
+          },
+          "device": {
+            "$ref": "#/components/schemas/DeviceContext"
+          },
+          "ip_address": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "ipv4"
+              },
+              {
+                "type": "string",
+                "format": "ipv6"
+              }
+            ],
+            "description": "Canonical IPv4 or IPv6 address resolved at the trusted ingress."
+          }
+        }
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "REQUEST_INVALID",
+          "AUTH_UNAUTHENTICATED",
+          "AUTH_FORBIDDEN",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_CONFLICT",
+          "IDEMPOTENCY_KEY_REUSED",
+          "VERSION_CONFLICT",
+          "EVENT_RESUME_EXPIRED",
+          "RATE_LIMITED",
+          "DEPENDENCY_BAD_GATEWAY",
+          "DEPENDENCY_UNAVAILABLE",
+          "DEPENDENCY_TIMEOUT"
+        ],
+        "x-dixian-http-status": {
+          "REQUEST_INVALID": 400,
+          "AUTH_UNAUTHENTICATED": 401,
+          "AUTH_FORBIDDEN": 403,
+          "RESOURCE_NOT_FOUND": 404,
+          "RESOURCE_CONFLICT": 409,
+          "IDEMPOTENCY_KEY_REUSED": 409,
+          "VERSION_CONFLICT": 409,
+          "EVENT_RESUME_EXPIRED": 409,
+          "RATE_LIMITED": 429,
+          "DEPENDENCY_BAD_GATEWAY": 502,
+          "DEPENDENCY_UNAVAILABLE": 503,
+          "DEPENDENCY_TIMEOUT": 504
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error_code",
+          "message",
+          "request_id",
+          "trace_id",
+          "log_number",
+          "retryable"
+        ],
+        "properties": {
+          "error_code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Generic user-safe text. Authorization denials never expose resource metadata."
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "trace_id": {
+            "$ref": "#/components/schemas/TraceId"
+          },
+          "log_number": {
+            "$ref": "#/components/schemas/LogNumber"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "retry_after_seconds": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "CursorPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-dixian-total-after-authorization": true,
+        "required": ["items", "next_cursor", "has_more", "total"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {}
+          },
+          "next_cursor": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Opaque cursor bound to tenant, user, scope, filter and ordering."
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Count after authorization and scope filtering, before page slicing."
+          }
+        }
+      },
+      "ResourceVersion": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Monotonic resource version returned in both the body and ETag."
+      },
+      "AuditReason": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 500,
+        "description": "Human or policy reason stored in audit data and never echoed in denial text."
+      },
+      "SseEventType": {
+        "type": "string",
+        "enum": [
+          "started",
+          "delta",
+          "artifact",
+          "citation",
+          "tool_pending",
+          "approval_pending",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "x-dixian-terminal-events": ["completed", "failed", "cancelled"]
+      },
+      "SseRunEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-dixian-sse-event-name": "run.event",
+        "x-dixian-resume": "Last-Event-ID is the decimal sequence; replay only the same run after that sequence",
+        "required": [
+          "schema_version",
+          "event_id",
+          "request_id",
+          "trace_id",
+          "log_number",
+          "conversation_id",
+          "run_id",
+          "sequence",
+          "type",
+          "occurred_at",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1
+          },
+          "event_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "trace_id": {
+            "$ref": "#/components/schemas/TraceId"
+          },
+          "log_number": {
+            "$ref": "#/components/schemas/LogNumber"
+          },
+          "conversation_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "type": {
+            "$ref": "#/components/schemas/SseEventType"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AuthorizationScopeType": {
+        "type": "string",
+        "enum": [
+          "company",
+          "department",
+          "module",
+          "agent",
+          "project",
+          "self",
+          "classification",
+          "data_domain"
+        ]
+      },
+      "AuthorizationScope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/AuthorizationScopeType"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Absent only for self scope. Values are opaque server-side resource references."
+          }
+        }
+      },
+      "EffectivePermissionGrant": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignment_id",
+          "role_code",
+          "source_type",
+          "valid_from",
+          "scopes"
+        ],
+        "properties": {
+          "assignment_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "role_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": ["direct", "position", "department", "project", "temporary"]
+          },
+          "source_entity_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scopes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/AuthorizationScope"
+            }
+          }
+        }
+      },
+      "EffectivePermission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["permission_code", "grants"],
+        "properties": {
+          "permission_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+          },
+          "grants": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/EffectivePermissionGrant"
+            }
+          }
+        }
+      },
+      "PermissionProjectionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["permissions"],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EffectivePermission"
+            }
+          }
+        },
+        "example": {
+          "permissions": [
+            {
+              "permission_code": "agent:chat",
+              "grants": [
+                {
+                  "assignment_id": "11111111-1111-4111-8111-111111111111",
+                  "role_code": "agent_user",
+                  "source_type": "project",
+                  "source_entity_id": "22222222-2222-4222-8222-222222222222",
+                  "valid_from": "2026-08-15T00:00:00.000Z",
+                  "scopes": [{ "type": "project", "value": "project-a" }]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "PortalAgentNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resource_key",
+          "name",
+          "owner",
+          "business_goal",
+          "icon",
+          "sort_order",
+          "favorite",
+          "last_visited_at"
+        ],
+        "properties": {
+          "resource_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "business_goal": { "type": "string", "minLength": 1 },
+          "icon": { "type": ["string", "null"] },
+          "sort_order": { "type": "integer", "minimum": 0 },
+          "favorite": { "type": "boolean" },
+          "last_visited_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "PortalModuleNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resource_key",
+          "name",
+          "owner",
+          "icon",
+          "sort_order",
+          "agents"
+        ],
+        "properties": {
+          "resource_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "icon": { "type": ["string", "null"] },
+          "sort_order": { "type": "integer", "minimum": 0 },
+          "agents": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/PortalAgentNode" }
+          }
+        }
+      },
+      "PortalDepartmentNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resource_key",
+          "name",
+          "owner",
+          "icon",
+          "sort_order",
+          "modules"
+        ],
+        "properties": {
+          "resource_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "icon": { "type": ["string", "null"] },
+          "sort_order": { "type": "integer", "minimum": 0 },
+          "modules": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/PortalModuleNode" }
+          }
+        }
+      },
+      "PortalCompanyNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resource_key", "name", "departments"],
+        "properties": {
+          "resource_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "departments": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/PortalDepartmentNode" }
+          }
+        }
+      },
+      "PortalTree": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["companies", "favorites", "recent"],
+        "properties": {
+          "companies": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PortalCompanyNode" }
+          },
+          "favorites": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PortalAgentNode" }
+          },
+          "recent": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PortalAgentNode" }
+          }
+        }
+      },
+      "PortalAgentDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resource_key",
+          "department_key",
+          "module_key",
+          "name",
+          "owner",
+          "business_goal",
+          "icon",
+          "sort_order",
+          "is_enabled",
+          "archived",
+          "previous_names"
+        ],
+        "properties": {
+          "resource_key": { "type": "string", "minLength": 1 },
+          "department_key": { "type": "string", "minLength": 1 },
+          "module_key": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "business_goal": { "type": "string", "minLength": 1 },
+          "icon": { "type": ["string", "null"] },
+          "sort_order": { "type": "integer", "minimum": 0 },
+          "is_enabled": { "type": "boolean" },
+          "archived": { "type": "boolean" },
+          "previous_names": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "PortalResourcePatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "icon": { "type": ["string", "null"] },
+          "sort_order": { "type": "integer", "minimum": 0 },
+          "is_enabled": { "type": "boolean" },
+          "archived": { "type": "boolean" }
+        }
+      },
+      "PortalResourceConfiguration": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resource_key",
+          "name",
+          "owner",
+          "icon",
+          "sort_order",
+          "is_enabled",
+          "archived"
+        ],
+        "properties": {
+          "resource_key": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "icon": { "type": ["string", "null"] },
+          "sort_order": { "type": "integer", "minimum": 0 },
+          "is_enabled": { "type": "boolean" },
+          "archived": { "type": "boolean" }
+        }
+      },
+      "PortalFavoriteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["favorite"],
+        "properties": { "favorite": { "type": "boolean" } }
+      },
+      "PortalFavoriteResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resource_key", "favorite"],
+        "properties": {
+          "resource_key": { "type": "string", "minLength": 1 },
+          "favorite": { "type": "boolean" }
+        }
+      },
+      "PortalVisitResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resource_key", "last_visited_at"],
+        "properties": {
+          "resource_key": { "type": "string", "minLength": 1 },
+          "last_visited_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "NavigationProjectionItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "path", "permission_code"],
+        "properties": {
+          "key": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "label": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "path": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "permission_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+          }
+        }
+      },
+      "NavigationProjectionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationProjectionItem"
+            }
+          }
+        }
+      },
+      "RbacPermissionDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "name",
+          "resource_type",
+          "action",
+          "risk_level",
+          "applicable_scope_types",
+          "required_data_domain",
+          "is_system",
+          "is_active"
+        ],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,127}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "resource_type": { "type": "string", "minLength": 1 },
+          "action": { "type": "string", "minLength": 1 },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          "applicable_scope_types": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/AuthorizationScopeType" }
+          },
+          "required_data_domain": { "type": ["string", "null"] },
+          "is_system": { "type": "boolean" },
+          "is_active": { "type": "boolean" }
+        }
+      },
+      "RbacPermissionListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["permissions"],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RbacPermissionDefinition" }
+          }
+        }
+      },
+      "RbacRole": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "name",
+          "description",
+          "version",
+          "is_system",
+          "is_active",
+          "permissions",
+          "default_scopes",
+          "default_validity_days",
+          "affected_user_count",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,127}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": ["string", "null"] },
+          "version": { "$ref": "#/components/schemas/ResourceVersion" },
+          "is_system": { "type": "boolean" },
+          "is_active": { "type": "boolean" },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+            }
+          },
+          "default_scopes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          },
+          "default_validity_days": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "affected_user_count": { "type": "integer", "minimum": 0 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "RbacRoleListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["roles"],
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RbacRole" }
+          }
+        }
+      },
+      "RbacRoleCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "name", "permissions", "default_scopes", "reason"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,127}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+            }
+          },
+          "default_scopes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          },
+          "default_validity_days": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
+        }
+      },
+      "RbacRoleCopyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "name", "reason"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,127}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
+        }
+      },
+      "RbacRoleUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expected_version",
+          "name",
+          "permissions",
+          "default_scopes",
+          "is_active",
+          "reason"
+        ],
+        "properties": {
+          "expected_version": {
+            "$ref": "#/components/schemas/ResourceVersion"
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+            }
+          },
+          "default_scopes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          },
+          "default_validity_days": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "is_active": { "type": "boolean" },
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
+        }
+      },
+      "RbacUserSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "employee_number",
+          "username",
+          "display_name",
+          "email",
+          "is_active",
+          "employment_status",
+          "positions",
+          "active_assignment_count"
+        ],
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Uuid" },
+          "employee_number": { "type": "string", "minLength": 1 },
+          "username": { "type": "string", "minLength": 1 },
+          "display_name": { "type": "string", "minLength": 1 },
+          "email": { "type": "string", "format": "email" },
+          "is_active": { "type": "boolean" },
+          "employment_status": { "type": "string", "minLength": 1 },
+          "positions": { "type": "array", "items": { "type": "object" } },
+          "active_assignment_count": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "RbacUserListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["users"],
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RbacUserSummary" }
+          }
+        }
+      },
+      "RoleAssignment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "user_id",
+          "role_code",
+          "role_name",
+          "source_type",
+          "source_entity_id",
+          "assigned_by_user_id",
+          "assigned_by_name",
+          "reason",
+          "valid_from",
+          "valid_until",
+          "revoked_at",
+          "revocation_reason",
+          "status",
+          "scopes"
+        ],
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Uuid" },
+          "user_id": { "$ref": "#/components/schemas/Uuid" },
+          "role_code": { "type": "string", "minLength": 1 },
+          "role_name": { "type": "string", "minLength": 1 },
+          "source_type": {
+            "type": "string",
+            "enum": ["direct", "position", "department", "project", "temporary"]
+          },
+          "source_entity_id": { "type": ["string", "null"] },
+          "assigned_by_user_id": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/Uuid" },
+              { "type": "null" }
+            ]
+          },
+          "assigned_by_name": { "type": ["string", "null"] },
+          "reason": { "type": ["string", "null"] },
+          "valid_from": { "type": "string", "format": "date-time" },
+          "valid_until": { "type": ["string", "null"], "format": "date-time" },
+          "revoked_at": { "type": ["string", "null"], "format": "date-time" },
+          "revocation_reason": { "type": ["string", "null"] },
+          "status": {
+            "type": "string",
+            "enum": ["active", "scheduled", "expired", "revoked"]
+          },
+          "scopes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          }
+        }
+      },
+      "UserAssignmentsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assignments", "effective_permissions"],
+        "properties": {
+          "assignments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RoleAssignment" }
+          },
+          "effective_permissions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/EffectivePermission" }
+          }
+        }
+      },
+      "RoleAssignmentBatchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "user_ids",
+          "role_code",
+          "source_type",
+          "scopes",
+          "reason"
+        ],
+        "properties": {
+          "user_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "uniqueItems": true,
+            "items": { "$ref": "#/components/schemas/Uuid" }
+          },
+          "role_code": { "type": "string", "minLength": 1 },
+          "source_type": { "type": "string", "enum": ["direct", "temporary"] },
+          "scopes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          },
+          "valid_from": { "type": "string", "format": "date-time" },
+          "valid_until": { "type": "string", "format": "date-time" },
+          "confirm_risk": { "type": "boolean", "default": false },
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
+        }
+      },
+      "RoleAssignmentBatchResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assignments", "warnings"],
+        "properties": {
+          "assignments": { "type": "array", "items": { "type": "object" } },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ReasonRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reason"],
+        "properties": {
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
+        }
+      },
+      "DefaultRoleMapping": {
+        "type": "object",
+        "required": ["id", "source_type", "source_external_id", "role_code"],
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Uuid" },
+          "source_type": {
+            "type": "string",
+            "enum": ["department", "position"]
+          },
+          "source_external_id": { "type": "string", "minLength": 1 },
+          "source_name": { "type": "string" },
+          "role_code": { "type": "string", "minLength": 1 },
+          "role_name": { "type": "string" },
+          "affected_user_count": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "DefaultRoleMappingListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mappings"],
+        "properties": {
+          "mappings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DefaultRoleMapping" }
+          }
+        }
+      },
+      "DefaultRoleMappingCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "source_type",
+          "source_external_id",
+          "role_code",
+          "reason"
+        ],
+        "properties": {
+          "source": { "type": "string", "const": "wecom" },
+          "source_type": {
+            "type": "string",
+            "enum": ["department", "position"]
+          },
+          "source_external_id": { "type": "string", "minLength": 1 },
+          "role_code": { "type": "string", "minLength": 1 },
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
+        }
+      },
+      "AuthorizationResourceScope": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "company": { "type": "string", "minLength": 1 },
+          "department": { "type": "string", "minLength": 1 },
+          "module": { "type": "string", "minLength": 1 },
+          "agent": { "type": "string", "minLength": 1 },
+          "project": { "type": "string", "minLength": 1 },
+          "self": { "type": "string", "minLength": 1 },
+          "classification": { "type": "string", "minLength": 1 },
+          "data_domain": { "type": "string", "minLength": 1 }
+        }
+      },
+      "RbacSimulationCheck": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "permission_code"],
+        "properties": {
+          "surface": {
+            "type": "string",
+            "enum": ["page", "button", "api", "agent", "data"]
+          },
+          "permission_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+          },
+          "resource": {
+            "$ref": "#/components/schemas/AuthorizationResourceScope"
+          }
+        }
+      },
+      "RbacSimulationDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "surface",
+          "permission_code",
+          "resource",
+          "allowed",
+          "denial_reason",
+          "matching_grants"
+        ],
+        "properties": {
+          "surface": {
+            "type": "string",
+            "enum": ["page", "button", "api", "agent", "data"]
+          },
+          "permission_code": { "type": "string", "minLength": 1 },
+          "resource": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/AuthorizationResourceScope" },
+              { "type": "null" }
+            ]
+          },
+          "allowed": { "type": "boolean" },
+          "denial_reason": {
+            "type": ["string", "null"],
+            "enum": ["permission_not_granted", "scope_mismatch", null]
+          },
+          "matching_grants": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RbacSimulationGrant" }
+          }
+        }
+      },
+      "RbacSimulationGrant": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignment_id",
+          "role_code",
+          "source_type",
+          "valid_from",
+          "scopes"
+        ],
+        "properties": {
+          "assignment_id": { "type": "string", "minLength": 1 },
+          "role_code": { "type": "string", "minLength": 1 },
+          "source_type": {
+            "type": "string",
+            "enum": ["direct", "position", "department", "project", "temporary"]
+          },
+          "source_entity_id": { "type": "string" },
+          "valid_from": { "type": "string", "format": "date-time" },
+          "valid_until": { "type": "string", "format": "date-time" },
+          "scopes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          }
+        }
+      },
+      "RbacSimulationEffectivePermission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["permission_code", "grants"],
+        "properties": {
+          "permission_code": { "type": "string", "minLength": 1 },
+          "grants": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RbacSimulationGrant" }
+          }
+        }
+      },
+      "RbacSimulationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["user_id", "checks"],
+        "properties": {
+          "user_id": { "$ref": "#/components/schemas/Uuid" },
+          "at": { "type": "string", "format": "date-time" },
+          "checks": {
+            "type": "array",
+            "maxItems": 100,
+            "items": { "$ref": "#/components/schemas/RbacSimulationCheck" }
+          },
+          "hypothetical_assignment": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role_code", "source_type", "scopes"],
+            "properties": {
+              "role_code": { "type": "string", "minLength": 1 },
+              "source_type": {
+                "type": "string",
+                "enum": ["direct", "temporary"]
+              },
+              "scopes": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+              },
+              "valid_until": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "RbacSimulationSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["permissions", "role_sources", "decisions"],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RbacSimulationEffectivePermission"
+            }
+          },
+          "role_sources": { "type": "array", "items": { "type": "object" } },
+          "decisions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RbacSimulationDecision" }
+          }
+        }
+      },
+      "RbacSimulationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "read_only",
+          "simulated_at",
+          "target_user_id",
+          "before",
+          "after",
+          "changes"
+        ],
+        "properties": {
+          "read_only": { "type": "boolean", "const": true },
+          "simulated_at": { "type": "string", "format": "date-time" },
+          "target_user_id": { "$ref": "#/components/schemas/Uuid" },
+          "before": { "$ref": "#/components/schemas/RbacSimulationSnapshot" },
+          "after": { "$ref": "#/components/schemas/RbacSimulationSnapshot" },
+          "changes": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["added_permissions", "removed_permissions"],
+            "properties": {
+              "added_permissions": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "removed_permissions": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "PermissionProposalStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "confirmed",
+          "pending_approval",
+          "approved",
+          "rejected",
+          "executed"
+        ]
+      },
+      "PermissionChangeProposal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "requester_user_id",
+          "target_user_id",
+          "target_user_name",
+          "role_code",
+          "role_name",
+          "role_version",
+          "source_type",
+          "scopes",
+          "requested_permissions",
+          "forbidden_permissions",
+          "impact_permissions",
+          "message",
+          "reason",
+          "valid_until",
+          "warnings",
+          "requires_approval",
+          "required_approval_permission",
+          "status",
+          "expires_at",
+          "confirmed_at",
+          "approved_at",
+          "approved_by_user_id",
+          "approval_reason",
+          "executed_at",
+          "executed_by_user_id",
+          "executed_assignment_id",
+          "execution_reason",
+          "created_at",
+          "updated_at",
+          "requester_can_execute"
+        ],
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Uuid" },
+          "requester_user_id": { "$ref": "#/components/schemas/Uuid" },
+          "target_user_id": { "$ref": "#/components/schemas/Uuid" },
+          "target_user_name": { "type": "string", "minLength": 1 },
+          "role_code": { "type": "string", "minLength": 1 },
+          "role_name": { "type": "string", "minLength": 1 },
+          "role_version": { "$ref": "#/components/schemas/ResourceVersion" },
+          "source_type": { "type": "string", "enum": ["direct", "temporary"] },
+          "scopes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          },
+          "requested_permissions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "forbidden_permissions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "impact_permissions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "message": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "reason": { "type": "string", "minLength": 1 },
+          "valid_until": { "type": ["string", "null"], "format": "date-time" },
+          "warnings": { "type": "array", "items": { "type": "string" } },
+          "requires_approval": { "type": "boolean" },
+          "required_approval_permission": {
+            "type": ["string", "null"],
+            "enum": ["approval:approve", null]
+          },
+          "status": { "$ref": "#/components/schemas/PermissionProposalStatus" },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "confirmed_at": { "type": ["string", "null"], "format": "date-time" },
+          "approved_at": { "type": ["string", "null"], "format": "date-time" },
+          "approved_by_user_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "approval_reason": { "type": ["string", "null"] },
+          "executed_at": { "type": ["string", "null"], "format": "date-time" },
+          "executed_by_user_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "executed_assignment_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "execution_reason": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "requester_can_execute": { "type": "boolean" }
+        }
+      },
+      "PermissionProposalListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["proposals"],
+        "properties": {
+          "proposals": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PermissionChangeProposal" }
+          }
+        }
+      },
+      "PermissionProposalSuggestRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["message"],
+        "properties": {
+          "message": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        }
+      },
+      "PermissionProposalConfirmRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["confirm"],
+        "properties": { "confirm": { "type": "boolean", "const": true } }
+      },
+      "PermissionProposalDecisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decision", "reason"],
+        "properties": {
+          "decision": { "type": "string", "enum": ["approve", "reject"] },
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
+        }
+      },
+      "AuthorizationChangeAuditEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "action",
+          "entity_type",
+          "entity_id",
+          "actor_user_id",
+          "actor_name",
+          "subject_user_id",
+          "subject_name",
+          "reason",
+          "before_state",
+          "after_state",
+          "log_number",
+          "occurred_at"
+        ],
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Uuid" },
+          "action": { "type": "string", "minLength": 1 },
+          "entity_type": { "type": "string", "minLength": 1 },
+          "entity_id": { "type": "string", "minLength": 1 },
+          "actor_user_id": { "$ref": "#/components/schemas/Uuid" },
+          "actor_name": { "type": "string", "minLength": 1 },
+          "subject_user_id": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/Uuid" },
+              { "type": "null" }
+            ]
+          },
+          "subject_name": { "type": ["string", "null"] },
+          "reason": { "type": "string", "minLength": 1 },
+          "before_state": { "type": ["object", "null"] },
+          "after_state": { "type": ["object", "null"] },
+          "log_number": { "$ref": "#/components/schemas/LogNumber" },
+          "occurred_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AuthorizationChangeAuditListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["events"],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuthorizationChangeAuditEvent"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "dixian_session",
+        "description": "HttpOnly SameSite=Strict platform session cookie scoped to /api/v1."
+      }
+    },
+    "parameters": {
+      "PortalResourceKey": {
+        "name": "resource_key",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": "Stable C01 department, module or Agent key. Hidden resources return 404."
+      },
+      "RoleCode": {
+        "name": "role_code",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.:-]{1,127}$"
+        }
+      },
+      "UserId": {
+        "name": "user_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Uuid" }
+      },
+      "AssignmentId": {
+        "name": "assignment_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Uuid" }
+      },
+      "MappingId": {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Uuid" }
+      },
+      "ProposalId": {
+        "name": "proposal_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Uuid" }
+      },
+      "RequestId": {
+        "name": "X-Request-ID",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        },
+        "description": "Required on private hops; public ingress always issues it."
+      },
+      "TraceParent": {
+        "name": "traceparent",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$"
+        }
+      },
+      "LogNumber": {
+        "name": "X-Log-Number",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/LogNumber"
+        },
+        "description": "Required on private hops; public client values are ignored."
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        }
+      },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\"[1-9][0-9]*\"$"
+        },
+        "description": "Quoted ResourceVersion expected by update and delete operations."
+      },
+      "AuditReason": {
+        "name": "X-Audit-Reason",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/AuditReason"
+        },
+        "description": "Required by policy for privileged, approval, security and destructive writes."
+      },
+      "LastEventId": {
+        "name": "Last-Event-ID",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "Request payload or query is invalid",
+        "x-dixian-error-codes": ["REQUEST_INVALID"],
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Unauthenticated": {
+        "description": "Missing or invalid authentication",
+        "x-dixian-error-codes": ["AUTH_UNAUTHENTICATED"],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated principal denied by policy",
+        "x-dixian-error-codes": ["AUTH_FORBIDDEN"],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "HiddenNotFound": {
+        "description": "Resource missing or deliberately hidden by policy",
+        "x-dixian-error-codes": ["RESOURCE_NOT_FOUND"],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Requested authorization resource does not exist",
+        "x-dixian-error-codes": ["RESOURCE_NOT_FOUND"],
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "State, version, idempotency or resume conflict",
+        "x-dixian-error-codes": [
+          "RESOURCE_CONFLICT",
+          "IDEMPOTENCY_KEY_REUSED",
+          "VERSION_CONFLICT",
+          "EVENT_RESUME_EXPIRED"
+        ],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate or quota limit",
+        "x-dixian-error-codes": ["RATE_LIMITED"],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "Invalid response from a dependency",
+        "x-dixian-error-codes": ["DEPENDENCY_BAD_GATEWAY"],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Required dependency unavailable",
+        "x-dixian-error-codes": ["DEPENDENCY_UNAVAILABLE"],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "GatewayTimeout": {
+        "description": "Required dependency timed out",
+        "x-dixian-error-codes": ["DEPENDENCY_TIMEOUT"],
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      }
+    }
+  }
+}

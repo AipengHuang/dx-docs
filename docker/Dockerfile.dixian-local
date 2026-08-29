@@ -1,0 +1,21 @@
+ARG WEKNORA_VERSION=v0.7.2
+
+FROM golang:1.26-bookworm AS builder
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libsqlite3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY . .
+RUN go run cmd/download/duckdb/duckdb.go && \
+    CGO_ENABLED=1 go build -o /out/WeKnora ./cmd/server
+
+ARG WEKNORA_VERSION
+FROM wechatopenai/weknora-app:${WEKNORA_VERSION}
+
+COPY --from=builder /out/WeKnora /app/WeKnora
