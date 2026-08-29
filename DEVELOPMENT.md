@@ -552,7 +552,7 @@ cp .env.example .env
 
 # 2. 启动核心服务
 docker compose up -d
-# 启动: frontend (Nginx:80), app (Go:8080), ollama (:11434), PostgreSQL, Redis
+# 启动: frontend (Nginx:80), app (Go:8080), PostgreSQL, Redis
 
 # 3. 启动可选服务 (按需)
 docker compose --profile full up -d        # 所有可选服务
@@ -622,7 +622,7 @@ make run-lite
 | **A. 部署基础** | `IMAGE_TAG`, `RUNTIME` | 镜像版本、运行时配置 |
 | **B. 数据与存储** | `DB_TYPE`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `REDIS_URL` | 数据库和缓存连接 |
 | **C. 检索与图谱** | `VECTOR_DB_TYPE`, `NEO4J_URI` | 向量数据库、图数据库 |
-| **D. 模型** | `LLM_PROVIDER`, `LLM_MODEL`, `OPENAI_API_KEY`, `OLLAMA_BASE_URL` | LLM、VLM、本地模型 |
+| **D. 模型** | `LLM_PROVIDER`, `LLM_MODEL`, `OPENAI_API_KEY` | 远程 LLM、VLM |
 | **E. 文档解析** | `DOCREADER_URL`, `PARSER_TIMEOUT` | docreader 配置、超时设置 |
 | **F. 认证与工作空间** | `JWT_SECRET`, `AES_KEY`, `RBAC_ENABLED`, `OIDC_*` | JWT、加密、RBAC、OIDC |
 | **G. Agent 与沙箱** | `AGENT_SKILLS_DIR`, `SANDBOX_TIMEOUT` | 技能目录、沙箱超时 |
@@ -658,7 +658,6 @@ AES_KEY=your_aes_key_min_32_chars
 services:
   frontend:       # Vue SPA (Nginx, 端口 80)
   app:            # Go 后端 (端口 8080, 健康检查)
-  ollama:         # 本地 Embedding 模型 (端口 11434)
   postgres:       # PostgreSQL + ParadeDB 扩展
   redis:          # Redis 7
   # 可选:

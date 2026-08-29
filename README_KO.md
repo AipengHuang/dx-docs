@@ -197,13 +197,10 @@ Feishu, Notion, Yuque 등 외부 플랫폼에서 지식 자동 동기화를 지�
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
 cp .env.example .env   # 필요에 따라 .env 편집 (파일 내 주석 참고)
-docker compose pull     # 최신 이미지 가져오기
-docker compose up -d    # 코어 서비스 시작
+./scripts/start_all.sh  # 가져오기·빌드 후 코어 서비스 시작
 ```
 
 시작 후 **http://localhost** 에 접속하여 바로 사용 가능합니다.
-
-> 로컬 Ollama 모델을 사용하려면 먼저 `ollama serve > /dev/null 2>&1 &` 를 실행하세요.
 
 ### 🔄 업그레이드
 

@@ -24,20 +24,6 @@ services:
       - WeKnora-network
     restart: unless-stopped
 
-  # Local multilingual embedding runtime for document indexing. The model is
-  # pulled explicitly after the container starts so image upgrades never
-  # replace or discard the model volume.
-  ollama:
-    image: ollama/ollama:latest
-    container_name: dixian-ollama
-    ports:
-      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    networks:
-      - WeKnora-network
-    restart: unless-stopped
-
   app:
     image: wechatopenai/weknora-app:${WEKNORA_VERSION:-latest}
     build:
@@ -262,9 +248,6 @@ services:
       - OSS_PATH_PREFIX=${OSS_PATH_PREFIX:-weknora/}
       - OSS_TEMP_BUCKET_NAME=${OSS_TEMP_BUCKET_NAME:-}
       - OSS_TEMP_REGION=${OSS_TEMP_REGION:-}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      # Ollama 不可用时仅告警不阻断（true 时生效）
-      - OLLAMA_OPTIONAL=${OLLAMA_OPTIONAL:-true}
       # 批量 embedding 大小
       - BATCH_EMBED_SIZE=${BATCH_EMBED_SIZE:-}
       # VLM 单次 HTTP 请求超时（秒，默认 180）
@@ -1026,7 +1009,6 @@ networks:
     driver: bridge
 
 volumes:
-  ollama-data:
   postgres-data:
   data-files:
   docreader-tmp:

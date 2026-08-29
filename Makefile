@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite
+.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite
 
 # Show help
 help:
@@ -22,7 +22,6 @@ help:
 	@echo "服务管理:"
 	@echo "  start-all         启动所有服务"
 	@echo "  stop-all          停止所有服务"
-	@echo "  start-ollama      仅启动 Ollama 服务"
 	@echo ""
 	@echo "镜像构建:"
 	@echo "  build-images      从源码构建所有镜像"
@@ -136,10 +135,6 @@ docker-run:
 # 使用新脚本启动所有服务
 start-all:
 	./scripts/start_all.sh
-
-# 使用新脚本仅启动Ollama服务
-start-ollama:
-	./scripts/start_all.sh --ollama
 
 # 使用新脚本仅启动Docker容器
 start-docker:
@@ -331,5 +326,4 @@ dev-app:
 
 dev-frontend:
 	./scripts/dev.sh frontend
-
 

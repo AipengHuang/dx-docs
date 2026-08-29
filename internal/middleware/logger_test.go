@@ -30,6 +30,33 @@ func TestRequestIDPropagatesLogNumber(t *testing.T) {
 	}
 }
 
+func TestParseLogNumber(t *testing.T) {
+	cases := []struct {
+		name  string
+		value string
+		valid bool
+	}{
+		{name: "valid", value: "LOG-01ARZ3NDEKTSV4RRFFQ69G5FAV", valid: true},
+		{name: "wrong prefix", value: "JOB-01ARZ3NDEKTSV4RRFFQ69G5FAV", valid: false},
+		{name: "wrong length", value: "LOG-01ARZ3NDEKTSV4RRFFQ69G5FA", valid: false},
+		{name: "invalid first digit", value: "LOG-81ARZ3NDEKTSV4RRFFQ69G5FAV", valid: false},
+		{name: "ambiguous character", value: "LOG-01ARZ3NDEKTSV4RRFFQ69G5FAI", valid: false},
+		{name: "lowercase", value: "LOG-01ARZ3NDEKTSV4RRFFQ69G5Fav", valid: false},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			value, valid := parseLogNumber(testCase.value)
+			if valid != testCase.valid {
+				t.Fatalf("parseLogNumber(%q) valid = %v", testCase.value, valid)
+			}
+			if valid && value != testCase.value {
+				t.Fatalf("parseLogNumber(%q) = %q", testCase.value, value)
+			}
+		})
+	}
+}
+
 func TestSanitizeBody(t *testing.T) {
 	cases := []struct {
 		name string
