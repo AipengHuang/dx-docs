@@ -217,13 +217,10 @@ See [`cli/README.md`](./cli/README.md) for install + 5-minute quickstart and
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
 cp .env.example .env   # Edit .env as needed, see comments in the file
-docker compose pull     # Pull the latest images
-docker compose up -d    # Start core services
+./scripts/start_all.sh  # Pull/build and start core services
 ```
 
 Once started, visit **http://localhost** to get started.
-
-> To use a local Ollama model, run `ollama serve > /dev/null 2>&1 &` first.
 
 ### 🔄 Upgrading
 

@@ -194,13 +194,10 @@
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
 cp .env.example .env   # 按需编辑 .env，详见文件内注释
-docker compose pull     # 拉取最新镜像
-docker compose up -d    # 启动核心服务
+./scripts/start_all.sh  # 拉取、构建并启动核心服务
 ```
 
 启动成功后访问 **http://localhost** 即可使用。
-
-> 如需使用本地 Ollama 模型，请先运行 `ollama serve > /dev/null 2>&1 &`
 
 ### 🔄 版本升级
 

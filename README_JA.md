@@ -187,13 +187,10 @@ Feishu、Notion、Yuqueなどの外部プラットフォームからのナレッ
 git clone https://github.com/Tencent/WeKnora.git
 cd WeKnora
 cp .env.example .env   # 必要に応じて .env を編集（詳細はファイル内のコメント参照）
-docker compose pull     # 最新イメージを取得
-docker compose up -d    # コアサービスを起動
+./scripts/start_all.sh  # 取得・ビルドしてコアサービスを起動
 ```
 
 起動後、**http://localhost** にアクセスして利用開始。
-
-> ローカル Ollama モデルを使用する場合は、先に `ollama serve > /dev/null 2>&1 &` を実行してください。
 
 ### 🔄 アップグレード
 

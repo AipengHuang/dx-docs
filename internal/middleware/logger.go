@@ -17,7 +17,10 @@ import (
 )
 
 const (
-	maxBodySize = 1024 * 10 // 最大记录10KB的body内容
+	maxBodySize       = 1024 * 10 // 最大记录10KB的body内容
+	logNumberHeader   = "X-Log-Number"
+	logNumberPrefix   = "LOG-"
+	logNumberBodySize = 26
 )
 
 // loggerResponseBodyWriter 自定义ResponseWriter用于捕获响应内容（用于logger中间件）
@@ -49,11 +52,34 @@ var sensitiveFieldRegex = regexp.MustCompile(
 		`authorization[_-]?url|authorization[_-]?attempt)")\s*:\s*"[^"]*"`,
 )
 
-var logNumberRegex = regexp.MustCompile(`^LOG-[0-7][0-9A-HJKMNP-TV-Z]{25}$`)
-
 // sanitizeBody 清理敏感信息
 func sanitizeBody(body string) string {
 	return sensitiveFieldRegex.ReplaceAllString(body, `$1:"***"`)
+}
+
+// parseLogNumber 按协议解析固定长度的 Crockford Base32 日志编号。
+func parseLogNumber(value string) (string, bool) {
+	if len(value) != len(logNumberPrefix)+logNumberBodySize || value[:len(logNumberPrefix)] != logNumberPrefix {
+		return "", false
+	}
+	body := value[len(logNumberPrefix):]
+	if body[0] < '0' || body[0] > '7' {
+		return "", false
+	}
+	for index := 1; index < len(body); index++ {
+		character := body[index]
+		if character >= '0' && character <= '9' {
+			continue
+		}
+		if character < 'A' || character > 'Z' {
+			return "", false
+		}
+		switch character {
+		case 'I', 'L', 'O', 'U':
+			return "", false
+		}
+	}
+	return value, true
 }
 
 var sensitiveQueryFields = map[string]struct{}{
@@ -93,13 +119,13 @@ func readRequestBody(c *gin.Context) string {
 	if !strings.Contains(contentType, "application/json") &&
 		!strings.Contains(contentType, "application/x-www-form-urlencoded") &&
 		!strings.Contains(contentType, "text/") {
-		return "[非文本类型，已跳过]"
+		return "[non-text body omitted]"
 	}
 
 	// 完整读取body内容（不限制大小），因为需要完整重置给后续handler使用
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		return "[读取请求体失败]"
+		return "[request body read failed]"
 	}
 
 	// 重置request body，使用完整内容，确保后续handler能读取到完整数据
@@ -115,7 +141,7 @@ func readRequestBody(c *gin.Context) string {
 
 	bodyStr := string(logBodyBytes)
 	if len(bodyBytes) > maxBodySize {
-		bodyStr += "... [内容过长，已截断]"
+		bodyStr += "... [content truncated]"
 	}
 
 	return sanitizeBody(bodyStr)
@@ -130,14 +156,11 @@ func RequestID() gin.HandlerFunc {
 			requestID = uuid.New().String()
 		}
 		safeRequestID := secutils.SanitizeForLog(requestID)
-		logNumber := c.GetHeader("X-Log-Number")
-		if !logNumberRegex.MatchString(logNumber) {
-			logNumber = ""
-		}
+		logNumber, hasLogNumber := parseLogNumber(c.GetHeader(logNumberHeader))
 		// Set request ID in header
 		c.Header("X-Request-ID", requestID)
-		if logNumber != "" {
-			c.Header("X-Log-Number", logNumber)
+		if hasLogNumber {
+			c.Header(logNumberHeader, logNumber)
 			c.Set("log_number", logNumber)
 		}
 
@@ -147,7 +170,7 @@ func RequestID() gin.HandlerFunc {
 		// Set logger in context
 		requestLogger := logger.GetLogger(c)
 		requestLogger = requestLogger.WithField("request_id", safeRequestID)
-		if logNumber != "" {
+		if hasLogNumber {
 			requestLogger = requestLogger.WithField("log_number", logNumber)
 		}
 		c.Set(types.LoggerContextKey.String(), requestLogger)
@@ -221,18 +244,18 @@ func Logger() gin.HandlerFunc {
 		if responseBody.Len() > 0 {
 			contentType := c.Writer.Header().Get("Content-Type")
 			if strings.Contains(contentType, "text/event-stream") {
-				responseBodyStr = "[SSE流式响应，已跳过]"
+				responseBodyStr = "[SSE response omitted]"
 			} else if strings.Contains(contentType, "application/json") ||
 				strings.Contains(contentType, "text/") {
 				bodyBytes := responseBody.Bytes()
 				if len(bodyBytes) >= maxBodySize {
-					responseBodyStr = string(bodyBytes[:maxBodySize]) + "... [内容过长，已截断]"
+					responseBodyStr = string(bodyBytes[:maxBodySize]) + "... [content truncated]"
 				} else {
 					responseBodyStr = string(bodyBytes)
 				}
 				responseBodyStr = sanitizeBody(responseBodyStr)
 			} else {
-				responseBodyStr = "[非文本类型，已跳过]"
+				responseBodyStr = "[non-text response omitted]"
 			}
 		}
 
