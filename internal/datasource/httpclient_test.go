@@ -17,7 +17,7 @@ func TestValidateConnectorBaseURLBlocksLoopback(t *testing.T) {
 }
 
 func TestValidateConnectorBaseURLAllowsPublicHTTPS(t *testing.T) {
-	secutils.ResetSSRFWhitelistForTest()
+	secutils.SetSSRFWhitelistFromRaw("open.feishu.cn")
 	t.Cleanup(secutils.ResetSSRFWhitelistForTest)
 
 	if err := ValidateConnectorBaseURL("https://open.feishu.cn"); err != nil {

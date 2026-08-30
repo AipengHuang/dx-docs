@@ -20,8 +20,8 @@ func TestKeenableProvider_Search_Keyless(t *testing.T) {
 		if got := r.Header.Get("X-API-Key"); got != "" {
 			t.Errorf("X-API-Key = %q, want empty for keyless", got)
 		}
-		if got := r.Header.Get("X-Keenable-Title"); got != "WeKnora" {
-			t.Errorf("X-Keenable-Title = %q, want WeKnora", got)
+		if got := r.Header.Get("X-Keenable-Title"); got != "Dixian Knowledge" {
+			t.Errorf("X-Keenable-Title = %q, want Dixian Knowledge", got)
 		}
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)

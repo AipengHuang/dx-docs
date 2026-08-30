@@ -1090,14 +1090,14 @@ func (h *Handler) runVLMAnalysisIfNeeded(streamCtx *sseStreamContext, reqCtx *qa
 // defaultAttachmentParseWaitTimeout bounds how long a QA turn waits for
 // still-parsing attachments before proceeding with only the finished ones.
 // Large or scanned documents can exceed this; raise it via
-// WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC when needed.
+// DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC when needed.
 const defaultAttachmentParseWaitTimeout = 60 * time.Second
 
 // attachmentParseWaitTimeout returns the configured wait timeout, honoring the
-// WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC override (in seconds) and falling
+// DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC override (in seconds) and falling
 // back to the default when unset or invalid.
 func attachmentParseWaitTimeout() time.Duration {
-	if raw := strings.TrimSpace(os.Getenv("WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC")); raw != "" {
+	if raw := strings.TrimSpace(os.Getenv("DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC")); raw != "" {
 		if secs, err := strconv.Atoi(raw); err == nil && secs > 0 {
 			return time.Duration(secs) * time.Second
 		}

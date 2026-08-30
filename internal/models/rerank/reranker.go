@@ -88,14 +88,12 @@ type RerankerConfig struct {
 	ExtraConfig map[string]string
 	// CustomHeaders 允许在调用远程 API 时附加自定义 HTTP 请求头（类似 OpenAI Python SDK 的 extra_headers）。
 	CustomHeaders map[string]string
-	AppID         string
-	AppSecret     string // 加密值，工厂函数调用方传入，使用前已解密
+	AppSecret     string
 }
 
 // ConfigFromModel 根据 types.Model 构造 RerankerConfig。
 // 生产路径（从 DB 拉起）和测试连接路径（临时表单）共享这份映射。
-// appID / appSecret 是已解密的 WeKnoraCloud 凭证，调用方负责传入。
-func ConfigFromModel(m *types.Model, appID, appSecret string) *RerankerConfig {
+func ConfigFromModel(m *types.Model, appSecret string) *RerankerConfig {
 	if m == nil {
 		return nil
 	}
@@ -108,7 +106,6 @@ func ConfigFromModel(m *types.Model, appID, appSecret string) *RerankerConfig {
 		Provider:      m.Parameters.Provider,
 		ExtraConfig:   m.Parameters.ExtraConfig,
 		CustomHeaders: m.Parameters.CustomHeaders,
-		AppID:         appID,
 		AppSecret:     appSecret,
 	}
 }
@@ -150,8 +147,6 @@ func newReranker(config *RerankerConfig) (Reranker, error) {
 		reranker, err = NewJinaReranker(config)
 	case provider.ProviderNvidia:
 		reranker, err = NewNvidiaReranker(config)
-	case provider.ProviderWeKnoraCloud:
-		reranker, err = NewWeKnoraCloudReranker(config)
 	case provider.ProviderLKEAP:
 		reranker, err = NewLKEAPReranker(config)
 	case provider.ProviderVolcengine:

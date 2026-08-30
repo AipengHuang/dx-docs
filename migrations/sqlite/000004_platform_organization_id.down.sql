@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS tenants_platform_organization_id_idx;

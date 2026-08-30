@@ -111,10 +111,10 @@ const (
 	// messages across the tenant.
 	APIKeyCapabilityMessageHistory APIKeyCapability = "message_history"
 	// APIKeyCapabilityManageModels lets a key manage tenant model
-	// definitions, credentials, model checks, and WeKnoraCloud credentials.
+	// 模型定义、凭据和模型检查。
 	APIKeyCapabilityManageModels APIKeyCapability = "manage_models"
 	// APIKeyCapabilityManageMCPServices lets a key manage tenant MCP service
-	// definitions, credentials, tool policies, and per-principal OAuth state.
+	// MCP 服务定义、凭据、工具策略和主体授权状态。
 	APIKeyCapabilityManageMCPServices APIKeyCapability = "manage_mcp_services"
 	// APIKeyCapabilityManageDataSources lets a key manage data-source
 	// connectors and sync jobs. KB scoping applies to data sources bound to a

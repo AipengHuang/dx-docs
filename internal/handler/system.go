@@ -400,12 +400,6 @@ func (h *SystemHandler) ListParserEngines(c *gin.Context) {
 			if tenant.ParserEngineConfig != nil {
 				overrides = tenant.ParserEngineConfig.ToOverridesMap()
 			}
-			if creds := tenant.Credentials.GetWeKnoraCloud(); creds != nil {
-				if overrides == nil {
-					overrides = make(map[string]string)
-				}
-				overrides["weknoracloud_app_id"] = creds.AppID
-			}
 		}
 	}
 
@@ -462,12 +456,6 @@ func (h *SystemHandler) ReconnectDocReader(c *gin.Context) {
 			if tenant.ParserEngineConfig != nil {
 				overrides = tenant.ParserEngineConfig.ToOverridesMap()
 			}
-			if creds := tenant.Credentials.GetWeKnoraCloud(); creds != nil {
-				if overrides == nil {
-					overrides = make(map[string]string)
-				}
-				overrides["weknoracloud_app_id"] = creds.AppID
-			}
 		}
 	}
 	remoteEngines := h.fetchRemoteEngines(c.Request.Context(), h.documentReader, overrides)
@@ -493,23 +481,13 @@ func (h *SystemHandler) CheckParserEngines(c *gin.Context) {
 		return
 	}
 	var existing *types.ParserEngineConfig
-	var tenant *types.Tenant
 	if v, exists := c.Get(types.TenantInfoContextKey.String()); exists {
 		if t, ok := v.(*types.Tenant); ok && t != nil {
-			tenant = t
 			existing = t.ParserEngineConfig
 		}
 	}
 	merged := types.MergeParserEngineConfigForUpdate(&body, existing)
 	overrides := merged.ToOverridesMap()
-	if tenant != nil {
-		if creds := tenant.Credentials.GetWeKnoraCloud(); creds != nil {
-			if overrides == nil {
-				overrides = make(map[string]string)
-			}
-			overrides["weknoracloud_app_id"] = creds.AppID
-		}
-	}
 	reader, docreaderAddr, docreaderTransport := h.resolveDocReader(c.Request.Context(), overrides)
 	connected := reader != nil && reader.IsConnected()
 	remoteEngines := h.fetchRemoteEngines(c.Request.Context(), reader, overrides)
@@ -517,23 +495,9 @@ func (h *SystemHandler) CheckParserEngines(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 0, "msg": "success", "data": engines, "docreader_addr": docreaderAddr, "docreader_transport": docreaderTransport, "connected": connected})
 }
 
-func (h *SystemHandler) resolveDocReader(ctx context.Context, overrides map[string]string) (interfaces.DocumentReader, string, string) {
-	if len(overrides) > 0 {
-		if addr := strings.TrimSpace(overrides["docreader_addr"]); addr != "" && service.IsWeKnoraCloudDocReaderAddr(addr) {
-			reader := h.ResolveDocumentReader(ctx, addr)
-			return reader, addr, transportFromDocReaderAddr(addr)
-		}
-	}
-
+func (h *SystemHandler) resolveDocReader(_ context.Context, _ map[string]string) (interfaces.DocumentReader, string, string) {
 	addr, transport := h.getDocReaderConnInfo()
 	return h.documentReader, addr, transport
-}
-
-func transportFromDocReaderAddr(addr string) string {
-	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(addr)), "https://") {
-		return "https"
-	}
-	return "http"
 }
 
 // fetchRemoteEngines queries the remote docreader for its engine list.
@@ -1297,30 +1261,6 @@ func (h *SystemHandler) checkOBS(c *gin.Context, ctx context.Context, cfg *types
 		return
 	}
 	c.JSON(200, gin.H{"code": 0, "data": StorageCheckResponse{OK: true, Message: fmt.Sprintf("连接成功，Bucket「%s」已确认存在", cfg.BucketName)}})
-}
-
-func (h *SystemHandler) ResolveDocumentReader(ctx context.Context, addr string) interfaces.DocumentReader {
-	if addr == "" {
-		return h.documentReader
-	}
-
-	if service.IsWeKnoraCloudDocReaderAddr(addr) {
-		creds := h.tenantSvc.GetWeKnoraCloudCredentials(ctx)
-		if creds == nil {
-			return nil
-		}
-		reader, err := docparser.NewWeKnoraCloudSignedDocumentReader(creds.AppID, creds.AppSecret)
-		if err != nil {
-			return nil
-		}
-		return reader
-	}
-
-	reader, err := docparser.NewHTTPDocumentReader(addr)
-	if err != nil || reader == nil {
-		return reader
-	}
-	return reader
 }
 
 // PromoteUserToSystemAdminRequest defines the request for promoting a user to system admin.
@@ -2276,7 +2216,7 @@ func (h *SystemHandler) ApplyDefaultStorageQuotaToAllTenants(c *gin.Context) {
 	gb := h.systemSettingSvc.GetInt(
 		ctx,
 		"tenant.default_storage_quota_gb",
-		"WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB",
+		"DIXIAN_KNOWLEDGE_TENANT_DEFAULT_STORAGE_QUOTA_GB",
 		10,
 	)
 	if gb <= 0 {

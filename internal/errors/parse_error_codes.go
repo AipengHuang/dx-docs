@@ -11,7 +11,7 @@ package errors
 
 const (
 	// ErrCodeDocReaderTimeout — DocReader RPC exceeded
-	// WEKNORA_DOCREADER_CALL_TIMEOUT (default 30m). Suggest splitting
+	// 超过 DIXIAN_KNOWLEDGE_DOCREADER_CALL_TIMEOUT（默认 30 分钟）时返回。
 	// large files or checking docreader load.
 	ErrCodeDocReaderTimeout = "DOCREADER_TIMEOUT"
 

@@ -443,6 +443,20 @@ func isSSRFSafeURL(rawURL string) (bool, string) {
 		return false, "IP-like hostname format is not allowed"
 	}
 
+	// 先拒绝危险端口，避免为必然失败的请求执行 DNS 查询。
+	port := parsed.Port()
+	if port != "" {
+		blockedPorts := map[string]bool{
+			"22": true, "23": true, "25": true, "445": true,
+			"3389": true, "5432": true, "3306": true, "6379": true,
+			"27017": true, "9200": true, "2379": true, "2380": true,
+			"8500": true, "4001": true,
+		}
+		if blockedPorts[port] {
+			return false, fmt.Sprintf("port %s is blocked for security reasons", port)
+		}
+	}
+
 	// Perform DNS resolution to check the resolved IP
 	// This prevents DNS rebinding attacks where a domain resolves to internal IPs
 	ips, err := net.LookupIP(hostname)
@@ -454,31 +468,6 @@ func isSSRFSafeURL(rawURL string) (bool, string) {
 	for _, resolvedIP := range ips {
 		if restricted, reason := isRestrictedIP(resolvedIP); restricted {
 			return false, fmt.Sprintf("hostname %s resolves to restricted IP %s: %s", hostname, resolvedIP.String(), reason)
-		}
-	}
-
-	// Check for suspicious port numbers
-	port := parsed.Port()
-	if port != "" {
-		// Block common internal service ports
-		blockedPorts := map[string]bool{
-			"22":    true, // SSH
-			"23":    true, // Telnet
-			"25":    true, // SMTP
-			"445":   true, // SMB
-			"3389":  true, // RDP
-			"5432":  true, // PostgreSQL
-			"3306":  true, // MySQL
-			"6379":  true, // Redis
-			"27017": true, // MongoDB
-			"9200":  true, // Elasticsearch
-			"2379":  true, // etcd
-			"2380":  true, // etcd
-			"8500":  true, // Consul
-			"4001":  true, // etcd (old)
-		}
-		if blockedPorts[port] {
-			return false, fmt.Sprintf("port %s is blocked for security reasons", port)
 		}
 	}
 

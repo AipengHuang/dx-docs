@@ -17,7 +17,10 @@ import (
 )
 
 const (
-	maxBodySize = 1024 * 10 // 最大记录10KB的body内容
+	maxBodySize       = 1024 * 10 // 最大记录10KB的body内容
+	logNumberHeader   = "X-Log-Number"
+	logNumberPrefix   = "LOG-"
+	logNumberBodySize = 26
 )
 
 // loggerResponseBodyWriter 自定义ResponseWriter用于捕获响应内容（用于logger中间件）
@@ -130,6 +133,9 @@ func RequestID() gin.HandlerFunc {
 		safeRequestID := secutils.SanitizeForLog(requestID)
 		// Set request ID in header
 		c.Header("X-Request-ID", requestID)
+		if logNumber := c.GetHeader(logNumberHeader); isValidLogNumber(logNumber) {
+			c.Header(logNumberHeader, logNumber)
+		}
 
 		// Set request ID in context
 		c.Set(types.RequestIDContextKey.String(), requestID)
@@ -149,6 +155,28 @@ func RequestID() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func isValidLogNumber(value string) bool {
+	if len(value) != len(logNumberPrefix)+logNumberBodySize || value[:len(logNumberPrefix)] != logNumberPrefix {
+		return false
+	}
+
+	// 首位限制为 0-7，保证 26 位 Crockford Base32 值可表示 128 位标识。
+	if value[len(logNumberPrefix)] < '0' || value[len(logNumberPrefix)] > '7' {
+		return false
+	}
+	for index := len(logNumberPrefix) + 1; index < len(value); index++ {
+		character := value[index]
+		if character >= '0' && character <= '9' {
+			continue
+		}
+		if character >= 'A' && character <= 'Z' && character != 'I' && character != 'L' && character != 'O' && character != 'U' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // Logger middleware logs request details with request ID, input and output

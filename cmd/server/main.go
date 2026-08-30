@@ -1,25 +1,10 @@
-// Package main is the main package for the WeKnora server
-// It contains the main function and the entry point for the server
+// Package main starts the private Dixian knowledge execution service.
 //
-// @title           WeKnora API
+// @title           Dixian Knowledge Internal API
 // @version         1.0
-// @description     WeKnora 知识库管理系统 API 文档
-// @termsOfService  http://swagger.io/terms/
+// @description     Private knowledge execution API
 //
-// @contact.name   WeKnora Github
-// @contact.url    https://github.com/Tencent/WeKnora
-//
-// @BasePath  /api/v1
-//
-// @securityDefinitions.apikey Bearer
-// @in header
-// @name Authorization
-// @description 用户登录认证：输入 Bearer {token} 格式的 JWT 令牌
-
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name X-API-Key
-// @description API Key 认证：空间 Key 固定访问所属空间；平台 Key 调用空间接口时需同时传 X-Tenant-ID
+// @BasePath  /internal/v1
 package main
 
 import (
@@ -57,16 +42,11 @@ func main() {
 	// Build dependency injection container
 	c := container.BuildContainer(runtime.GetContainer())
 
-	// One-shot bootstrap hooks (e.g. promote env-named user to system
-	// admin). Best-effort: never aborts startup — see bootstrap.go.
-	runStartupBootstrap(c)
-
 	// Run application
 	err := c.Invoke(func(
 		cfg *config.Config,
 		router *gin.Engine,
 		resourceCleaner interfaces.ResourceCleaner,
-		systemSettingSvc interfaces.SystemSettingService,
 	) error {
 		// Create HTTP server
 		server := &http.Server{
@@ -80,15 +60,6 @@ func main() {
 		}
 
 		ctx, done := context.WithCancel(context.Background())
-
-		// Start the system_settings pubsub subscriber. Runs in its own
-		// goroutine and exits when ctx is cancelled at shutdown. Best-
-		// effort: an error here only warns (Redis may legitimately be
-		// disabled in lite-mode deployments — the service no-ops in
-		// that case anyway).
-		if err := systemSettingSvc.SubscribeRedis(ctx); err != nil {
-			logger.Warnf(ctx, "[system_settings] subscribe failed: %v", err)
-		}
 
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, shutdownSignals...)

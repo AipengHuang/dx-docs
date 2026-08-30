@@ -519,7 +519,7 @@ type WikiConfig struct {
 	//      errgroups sized by IngestMapParallel / IngestReduceParallel.
 	// Effective peak in-flight LLM calls for one KB ≈
 	//   IngestMaxInflight × max(IngestMapParallel, IngestReduceParallel),
-	// further bounded by the wiki pool size (WEKNORA_WIKI_ASYNQ_CONCURRENCY).
+	// 最终还受 Wiki 工作池大小限制。
 
 	// IngestBatchSize controls how many pending ops a single batch claims and
 	// processes before scheduling a follow-up. 0 falls back to the hard-coded

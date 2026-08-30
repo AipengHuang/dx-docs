@@ -453,7 +453,7 @@ func (s *Service) buildIMMCPAuthNotice(ctx context.Context, services []imMCPAuth
 		if authURL != "" {
 			lines = append(lines, fmt.Sprintf("• %s：%s", name, authURL))
 		} else {
-			lines = append(lines, fmt.Sprintf("• %s（请在 WeKnora 管理后台完成 OAuth 授权）", name))
+			lines = append(lines, fmt.Sprintf("• %s (complete OAuth authorization in the administration console)", name))
 		}
 	}
 

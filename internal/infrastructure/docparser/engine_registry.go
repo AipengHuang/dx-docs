@@ -27,7 +27,6 @@ func RegisterEngine(e EngineRegistration) {
 func init() {
 	RegisterEngine(&builtinEngine{})
 	RegisterEngine(&simpleEngine{})
-	RegisterEngine(&weKnoraCloudEngine{})
 	RegisterEngine(&mineruEngine{})
 	RegisterEngine(&mineruCloudEngine{})
 	RegisterEngine(&paddleOCRVLEngine{})
@@ -57,9 +56,6 @@ func (e *builtinEngine) CheckAvailable(docreaderConnected bool, _ map[string]str
 // SimpleEngineName is the engine name for Go-native simple format handling.
 const SimpleEngineName = "simple"
 
-// WeKnoraCloudEngineName is the engine name for WeKnoraCloud-backed document parsing.
-const WeKnoraCloudEngineName = "weknoracloud"
-
 // ---------------------------------------------------------------------------
 // simple — Go handles md/txt/csv natively, no external service needed.
 // Distinct from docreader's "builtin" which uses Python libraries for
@@ -77,24 +73,6 @@ func (e *simpleEngine) FileTypes(_ bool) []string {
 }
 func (e *simpleEngine) CheckAvailable(_ bool, _ map[string]string) (bool, string) {
 	return true, ""
-}
-
-// ---------------------------------------------------------------------------
-// weknoracloud — Tenant-scoped WeKnoraCloud docreader with signed requests.
-// ---------------------------------------------------------------------------
-
-type weKnoraCloudEngine struct{}
-
-func (e *weKnoraCloudEngine) Name() string        { return WeKnoraCloudEngineName }
-func (e *weKnoraCloudEngine) Description() string { return "WeKnoraCloud document reader" }
-func (e *weKnoraCloudEngine) FileTypes(_ bool) []string {
-	return []string{"docx", "doc", "pdf", "md", "markdown", "xlsx", "xls", "pptx", "ppt"}
-}
-func (e *weKnoraCloudEngine) CheckAvailable(docreaderConnected bool, overrides map[string]string) (bool, string) {
-	if overrides["weknoracloud_app_id"] != "" {
-		return true, ""
-	}
-	return false, "WeKnora Cloud credentials not configured. Go to Settings → WeKnora Cloud to set up."
 }
 
 // ---------------------------------------------------------------------------

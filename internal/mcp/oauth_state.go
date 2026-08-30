@@ -80,7 +80,7 @@ func newOAuthStateStore(rdb *redis.Client) *oauthStateStore {
 }
 
 func (s *oauthStateStore) key(state string) string {
-	ns := strings.TrimSpace(os.Getenv("WEKNORA_REDIS_NAMESPACE"))
+	ns := strings.TrimSpace(os.Getenv("DIXIAN_KNOWLEDGE_REDIS_NAMESPACE"))
 	if ns != "" {
 		return "weknora:mcp_oauth_state:" + ns + ":" + state
 	}

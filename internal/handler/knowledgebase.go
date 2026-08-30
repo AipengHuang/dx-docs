@@ -32,9 +32,6 @@ type KnowledgeBaseHandler struct {
 	agentShareService  interfaces.AgentShareService
 	asynqClient        interfaces.TaskEnqueuer
 	vectorStoreService interfaces.VectorStoreService // enriches KB responses with bound store display
-	// userService 仅在 list 类接口里用于批量回填 creator_name；
-	// 真正的鉴权由 RBAC 中间件 + Lookup 完成，这里不参与决策。
-	userService interfaces.UserService
 }
 
 // NewKnowledgeBaseHandler creates a new knowledge base handler instance
@@ -45,7 +42,6 @@ func NewKnowledgeBaseHandler(
 	agentShareService interfaces.AgentShareService,
 	asynqClient interfaces.TaskEnqueuer,
 	vectorStoreService interfaces.VectorStoreService,
-	userService interfaces.UserService,
 ) *KnowledgeBaseHandler {
 	return &KnowledgeBaseHandler{
 		service:            service,
@@ -54,7 +50,6 @@ func NewKnowledgeBaseHandler(
 		agentShareService:  agentShareService,
 		asynqClient:        asynqClient,
 		vectorStoreService: vectorStoreService,
-		userService:        userService,
 	}
 }
 
@@ -714,11 +709,6 @@ func (h *KnowledgeBaseHandler) ListKnowledgeBases(c *gin.Context) {
 		}
 	}
 
-	// 批量回填 creator_name，让前端列表能区分「我创建」与「同空间其他成员创建」。
-	// 仅在 list 接口里回填，详情 / 编辑场景不依赖这个字段；解析失败（用户已删除、
-	// CreatorID 为空的老数据）就让字段为空，前端按 fallback 渲染。
-	enrichKBCreatorNames(ctx, h.userService, kbs)
-
 	callerTenantID := c.GetUint64(types.TenantIDContextKey.String())
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -738,43 +728,6 @@ func filterKnowledgeBasesForAPIKeyScope(ctx context.Context, kbs []*types.Knowle
 		}
 	}
 	return filtered
-}
-
-// enrichKBCreatorNames 把 KB 列表里的 CreatorID 批量解析成展示名（username
-// 优先，退化到 email）。任意一步失败都吞掉错误：creator_name 缺失只会影响
-// 卡片右下角的徽章展示，不该影响列表本身可用。
-func enrichKBCreatorNames(ctx context.Context, userSvc interfaces.UserService, kbs []*types.KnowledgeBase) {
-	if userSvc == nil || len(kbs) == 0 {
-		return
-	}
-	idSet := make(map[string]struct{}, len(kbs))
-	for _, kb := range kbs {
-		if kb.CreatorID != "" {
-			idSet[kb.CreatorID] = struct{}{}
-		}
-	}
-	if len(idSet) == 0 {
-		return
-	}
-	ids := make([]string, 0, len(idSet))
-	for id := range idSet {
-		ids = append(ids, id)
-	}
-	users, err := userSvc.GetUsersByIDs(ctx, ids)
-	if err != nil {
-		logger.Warnf(ctx, "Failed to resolve KB creator names: %v", err)
-		return
-	}
-	for _, kb := range kbs {
-		if kb.CreatorID == "" {
-			continue
-		}
-		u, ok := users[kb.CreatorID]
-		if !ok || u == nil {
-			continue
-		}
-		kb.CreatorName = pickUserDisplayName(u)
-	}
 }
 
 // pickUserDisplayName picks the field most users will recognise: Username

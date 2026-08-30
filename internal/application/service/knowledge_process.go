@@ -3750,18 +3750,6 @@ func (s *knowledgeService) resolveDocReader(ctx context.Context, engine, fileTyp
 	switch engine {
 	case docparser.SimpleEngineName:
 		return &docparser.SimpleFormatReader{}
-	case docparser.WeKnoraCloudEngineName:
-		creds := s.tenantService.GetWeKnoraCloudCredentials(ctx)
-		if creds == nil {
-			logger.Warnf(ctx, "[resolveDocReader] WeKnoraCloud: no tenant credentials (fileType=%s)", fileType)
-			return nil
-		}
-		reader, err := docparser.NewWeKnoraCloudSignedDocumentReader(creds.AppID, creds.AppSecret)
-		if err != nil {
-			logger.Errorf(ctx, "[resolveDocReader] WeKnoraCloud reader init failed: %v", err)
-			return nil
-		}
-		return reader
 	case "mineru":
 		return docparser.NewMinerUReader(overrides)
 	case "mineru_cloud":

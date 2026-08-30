@@ -9,7 +9,7 @@ import (
 
 const (
 	tenantSelfServiceCreationSettingKey = "tenant.self_service_creation_enabled"
-	tenantSelfServiceCreationEnvName    = "WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED"
+	tenantSelfServiceCreationEnvName    = "DIXIAN_KNOWLEDGE_TENANT_SELF_SERVICE_CREATION_ENABLED"
 )
 
 // resolveTenantSelfServiceCreationEnabled is the shared policy resolver used

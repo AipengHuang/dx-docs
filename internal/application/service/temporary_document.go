@@ -33,7 +33,7 @@ const (
 	temporaryDocumentMaxPromptParts = 16
 	// defaultTemporaryDocumentImageOCRMaxPages caps how many page images a
 	// scanned / image-only document may send to the VLM, bounding OCR latency.
-	// Override via WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES.
+	// 可通过 DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_OCR_MAX_PAGES 覆盖。
 	defaultTemporaryDocumentImageOCRMaxPages = 8
 	// temporaryDocumentLowTextRunes is the extracted-text threshold (in runes,
 	// ignoring image markdown) below which a document is treated as
@@ -43,7 +43,7 @@ const (
 	// OCR'd by the VLM at once. Multi-page scans benefit from concurrent OCR
 	// (wall-clock latency drops roughly linearly); the default matches the page
 	// cap so a full scan finishes in a single wave. Raising it loads the VLM
-	// backend harder — tune via WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY.
+	// 并发越高，模型服务负载越大，可通过对应环境变量调整。
 	defaultTemporaryDocumentOCRConcurrency = 8
 	// temporaryDocumentOCRSufficientRunes is the OCR-yield threshold (in runes)
 	// above which a standalone image is treated as text-rich enough that a VLM
@@ -55,15 +55,15 @@ const (
 )
 
 // temporaryDocumentImageOCRMaxPages returns the max page count OCR'd per
-// scanned document, honoring WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES.
+// scanned document, honoring DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_OCR_MAX_PAGES.
 func temporaryDocumentImageOCRMaxPages() int {
-	return envPositiveInt("WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES", defaultTemporaryDocumentImageOCRMaxPages)
+	return envPositiveInt("DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_OCR_MAX_PAGES", defaultTemporaryDocumentImageOCRMaxPages)
 }
 
 // temporaryDocumentOCRConcurrency returns the VLM OCR concurrency, honoring
-// WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY.
+// DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_OCR_CONCURRENCY.
 func temporaryDocumentOCRConcurrency() int {
-	return envPositiveInt("WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY", defaultTemporaryDocumentOCRConcurrency)
+	return envPositiveInt("DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_OCR_CONCURRENCY", defaultTemporaryDocumentOCRConcurrency)
 }
 
 // envPositiveInt reads a positive integer from the environment, falling back to
@@ -122,7 +122,7 @@ func NewTemporaryDocumentService(
 }
 
 func temporaryDocumentTTL() time.Duration {
-	if raw := strings.TrimSpace(os.Getenv("WEKNORA_CHAT_ATTACHMENT_TTL_HOURS")); raw != "" {
+	if raw := strings.TrimSpace(os.Getenv("DIXIAN_KNOWLEDGE_CHAT_ATTACHMENT_TTL_HOURS")); raw != "" {
 		if hours, err := strconv.Atoi(raw); err == nil && hours > 0 {
 			return time.Duration(hours) * time.Hour
 		}

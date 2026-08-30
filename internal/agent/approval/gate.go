@@ -21,7 +21,7 @@ import (
 
 // pubsubChannelBase is the Redis channel prefix used to fan-out Resolve calls
 // across backend replicas (issue #1173 cross-instance support). The actual
-// channel is suffixed with WEKNORA_REDIS_NAMESPACE (when set) so multiple
+// channel is suffixed with DIXIAN_KNOWLEDGE_REDIS_NAMESPACE (when set) so multiple
 // deployments sharing the same Redis don't cross-talk.
 const pubsubChannelBase = "weknora:mcp_approval:resolve"
 
@@ -61,7 +61,7 @@ type resolveAck struct {
 
 // pubsubChannel returns the namespaced pubsub channel name.
 func pubsubChannel() string {
-	if ns := strings.TrimSpace(os.Getenv("WEKNORA_REDIS_NAMESPACE")); ns != "" {
+	if ns := strings.TrimSpace(os.Getenv("DIXIAN_KNOWLEDGE_REDIS_NAMESPACE")); ns != "" {
 		return pubsubChannelBase + ":" + ns
 	}
 	return pubsubChannelBase
@@ -191,9 +191,8 @@ func NewGate(cfg *config.Config, checker Checker, rdb *redis.Client) *Gate {
 	if cfg != nil && cfg.Agent != nil && cfg.Agent.ToolApprovalTimeoutSeconds > 0 {
 		timeout = time.Duration(cfg.Agent.ToolApprovalTimeoutSeconds) * time.Second
 	}
-	// Default fail-close: if the checker errors, require approval (safer for a
-	// HITL feature). Set WEKNORA_AGENT_TOOL_APPROVAL_FAIL_OPEN=true to revert.
-	failClose := !strings.EqualFold(strings.TrimSpace(os.Getenv("WEKNORA_AGENT_TOOL_APPROVAL_FAIL_OPEN")), "true")
+	// 默认关闭放行：检查器报错时仍要求审批；仅在明确需要时通过环境变量恢复开放放行。
+	failClose := !strings.EqualFold(strings.TrimSpace(os.Getenv("DIXIAN_KNOWLEDGE_AGENT_TOOL_APPROVAL_FAIL_OPEN")), "true")
 	g := &Gate{
 		pending:   make(map[string]*waiter),
 		checker:   checker,
@@ -294,7 +293,7 @@ func (g *Gate) NeedsApproval(ctx context.Context, tenantID uint64, serviceID, to
 	if err != nil {
 		// Default fail-close: a transient DB error must NOT silently allow a
 		// dangerous tool to run. Operators can opt into legacy behaviour via
-		// WEKNORA_AGENT_TOOL_APPROVAL_FAIL_OPEN=true.
+		// 仅当对应环境变量为 true 时开放放行。
 		if g.failClose {
 			logger.GetLogger(ctx).Warnf("mcp tool approval check failed (fail-close: requiring approval): %v", err)
 			return true

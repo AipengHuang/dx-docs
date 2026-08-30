@@ -31,7 +31,7 @@ func TestBuildIMMCPAuthNotice(t *testing.T) {
 		{
 			name:     "single service",
 			input:    []imMCPAuthService{{ID: "svc-1", Name: "GitHub MCP"}},
-			contains: []string{"GitHub MCP", "OAuth 授权"},
+			contains: []string{"GitHub MCP", "OAuth authorization"},
 		},
 		{
 			name: "dedupe by id",

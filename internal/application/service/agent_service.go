@@ -342,22 +342,22 @@ func (s *agentService) initializeSkillsManager(
 	config *types.AgentConfig,
 	toolRegistry *tools.ToolRegistry,
 ) (*skills.Manager, error) {
-	// Initialize sandbox manager based on environment variables
-	// WEKNORA_SANDBOX_MODE: "docker", "local", "disabled" (default: "disabled")
-	// WEKNORA_SANDBOX_TIMEOUT: timeout in seconds (default: 60)
-	// WEKNORA_SANDBOX_DOCKER_IMAGE: custom Docker image (default: wechatopenai/weknora-sandbox:latest)
+	// 根据环境变量初始化沙箱管理器。
+	// 沙箱模式支持 docker、local 和 disabled，默认 disabled。
+	// 沙箱超时时间以秒为单位，默认 60 秒。
+	// DIXIAN_KNOWLEDGE_SANDBOX_DOCKER_IMAGE：自定义 Docker 镜像
 	var sandboxMgr sandbox.Manager
 	var err error
 
-	sandboxMode := os.Getenv("WEKNORA_SANDBOX_MODE")
+	sandboxMode := os.Getenv("DIXIAN_KNOWLEDGE_SANDBOX_MODE")
 	if sandboxMode == "" {
 		sandboxMode = "disabled"
 	}
-	dockerImage := os.Getenv("WEKNORA_SANDBOX_DOCKER_IMAGE")
+	dockerImage := os.Getenv("DIXIAN_KNOWLEDGE_SANDBOX_DOCKER_IMAGE")
 	if dockerImage == "" {
 		dockerImage = sandbox.DefaultDockerImage
 	}
-	sandboxTimeoutStr := os.Getenv("WEKNORA_SANDBOX_TIMEOUT")
+	sandboxTimeoutStr := os.Getenv("DIXIAN_KNOWLEDGE_SANDBOX_TIMEOUT")
 	sandboxTimeout := 60
 	if sandboxTimeoutStr != "" {
 		if v, err := strconv.Atoi(sandboxTimeoutStr); err == nil && v > 0 {

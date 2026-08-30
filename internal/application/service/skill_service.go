@@ -37,7 +37,7 @@ func NewSkillService() interfaces.SkillService {
 // getPreloadedSkillsDir returns the path to the preloaded skills directory
 func getPreloadedSkillsDir() string {
 	// Check if SKILLS_DIR environment variable is set
-	if dir := os.Getenv("WEKNORA_SKILLS_DIR"); dir != "" {
+	if dir := os.Getenv("DIXIAN_KNOWLEDGE_SKILLS_DIR"); dir != "" {
 		return dir
 	}
 

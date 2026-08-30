@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -33,7 +32,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/Tencent/WeKnora/internal/agent/approval"
 	"github.com/Tencent/WeKnora/internal/application/repository"
 	dorisRepo "github.com/Tencent/WeKnora/internal/application/repository/retriever/doris"
 	elasticsearchRepoV7 "github.com/Tencent/WeKnora/internal/application/repository/retriever/elasticsearch/v7"
@@ -47,7 +45,6 @@ import (
 	tencentVectorDBRepo "github.com/Tencent/WeKnora/internal/application/repository/retriever/tencentvectordb"
 	weaviateRepo "github.com/Tencent/WeKnora/internal/application/repository/retriever/weaviate"
 	"github.com/Tencent/WeKnora/internal/application/service"
-	chatpipeline "github.com/Tencent/WeKnora/internal/application/service/chat_pipeline"
 	"github.com/Tencent/WeKnora/internal/application/service/file"
 	"github.com/Tencent/WeKnora/internal/application/service/retriever"
 	"github.com/Tencent/WeKnora/internal/common"
@@ -60,34 +57,18 @@ import (
 	notionConnector "github.com/Tencent/WeKnora/internal/datasource/connector/notion"
 	rssConnector "github.com/Tencent/WeKnora/internal/datasource/connector/rss"
 	yuqueConnector "github.com/Tencent/WeKnora/internal/datasource/connector/yuque"
-	"github.com/Tencent/WeKnora/internal/event"
 	"github.com/Tencent/WeKnora/internal/handler"
-	"github.com/Tencent/WeKnora/internal/handler/session"
-	imPkg "github.com/Tencent/WeKnora/internal/im"
-	"github.com/Tencent/WeKnora/internal/im/dingtalk"
-	"github.com/Tencent/WeKnora/internal/im/feishu"
-	"github.com/Tencent/WeKnora/internal/im/mattermost"
-	"github.com/Tencent/WeKnora/internal/im/qqbot"
-	"github.com/Tencent/WeKnora/internal/im/slack"
-	"github.com/Tencent/WeKnora/internal/im/telegram"
-	"github.com/Tencent/WeKnora/internal/im/wechat"
-	"github.com/Tencent/WeKnora/internal/im/wecom"
-	"github.com/Tencent/WeKnora/internal/im/yunzhijia"
 	"github.com/Tencent/WeKnora/internal/infrastructure/docparser"
 	infra_web_search "github.com/Tencent/WeKnora/internal/infrastructure/web_search"
 	"github.com/Tencent/WeKnora/internal/logger"
-	"github.com/Tencent/WeKnora/internal/mcp"
-	"github.com/Tencent/WeKnora/internal/models/chat"
 	"github.com/Tencent/WeKnora/internal/models/embedding"
 	"github.com/Tencent/WeKnora/internal/models/limiter"
 	"github.com/Tencent/WeKnora/internal/models/utils/ollama"
 	"github.com/Tencent/WeKnora/internal/router"
 	"github.com/Tencent/WeKnora/internal/storageallowlist"
-	"github.com/Tencent/WeKnora/internal/stream"
 	"github.com/Tencent/WeKnora/internal/tracing/langfuse"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
-	secutils "github.com/Tencent/WeKnora/internal/utils"
 	"github.com/tencent/vectordatabase-sdk-go/tcvectordb"
 	"github.com/weaviate/weaviate-go-client/v5/weaviate"
 	"github.com/weaviate/weaviate-go-client/v5/weaviate/auth"
@@ -133,7 +114,6 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(docparser.NewImageResolver))
 	must(container.Provide(initOllamaService))
 	must(container.Provide(initNeo4jClient))
-	must(container.Provide(stream.NewStreamManager))
 	logger.Debugf(ctx, "[Container] Initializing DuckDB...")
 	must(container.Provide(NewDuckDB))
 	logger.Debugf(ctx, "[Container] DuckDB registered")
@@ -141,9 +121,6 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	// Data repositories layer
 	logger.Debugf(ctx, "[Container] Registering repositories...")
 	must(container.Provide(repository.NewTenantRepository))
-	must(container.Provide(repository.NewTenantAPIKeyRepository))
-	must(container.Provide(repository.NewTenantMemberRepository))
-	must(container.Provide(repository.NewTenantInvitationRepository))
 	must(container.Provide(repository.NewAuditLogRepository))
 	must(container.Provide(repository.NewKnowledgeBaseRepository))
 	must(container.Provide(repository.NewKnowledgeRepository))
@@ -155,7 +132,6 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewMessageSuggestionRepository))
 	must(container.Provide(repository.NewModelRepository))
 	must(container.Provide(repository.NewUserRepository))
-	must(container.Provide(repository.NewAuthTokenRepository))
 	must(container.Provide(repository.NewSystemSettingRepository))
 	must(container.Provide(neo4jRepo.NewNeo4jRepository))
 	must(container.Provide(repository.NewMCPServiceRepository))
@@ -175,17 +151,9 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(repository.NewTaskPendingOpsRepository))
 	must(container.Provide(repository.NewTaskDeadLetterRepository))
 
-	// MCP manager for managing MCP client connections
-	logger.Debugf(ctx, "[Container] Registering MCP manager...")
-	must(container.Provide(mcp.NewMCPManager))
-	must(container.Provide(mcp.NewOAuthManager))
-
 	// Business service layer
 	logger.Debugf(ctx, "[Container] Registering business services...")
 	must(container.Provide(service.NewTenantService))
-	must(container.Provide(service.NewTenantAPIKeyService))
-	must(container.Provide(service.NewTenantMemberService))
-	must(container.Provide(service.NewTenantInvitationService))
 	must(container.Provide(service.NewAuditLogService))
 	must(container.Provide(service.NewAuditLogRetentionRunner))
 	must(container.Provide(service.NewKnowledgeBaseService))
@@ -200,9 +168,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewModelService))
 	must(container.Provide(service.NewDatasetService))
 	must(container.Provide(service.NewEvaluationService))
-	must(container.Provide(service.NewUserService))
 	must(container.Provide(service.NewSystemSettingService))
-	must(container.Provide(service.NewWeKnoraCloudService))
 
 	// Extract services - register individual extracters with names
 	must(container.Provide(service.NewChunkExtractService, dig.Name("chunkExtractor")))
@@ -211,16 +177,9 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewKnowledgePostProcessService, dig.Name("knowledgePostProcess")))
 	must(container.Provide(service.NewKnowledgeAutoTagService, dig.Name("knowledgeAutoTag")))
 
-	must(container.Provide(service.NewMessageService))
-	must(container.Provide(service.NewMessageSuggestionService))
-	must(container.Provide(service.NewMCPServiceService))
-	must(container.Provide(service.NewMCPToolApprovalService))
-	must(container.Provide(service.NewCustomAgentService))
-	must(container.Provide(service.NewUserResourceFavoriteService))
 	must(container.Provide(service.NewWikiPageService))
 	must(container.Provide(service.NewWikiIngestService, dig.Name("wikiIngest")))
 	must(container.Provide(service.NewWikiLintService))
-	must(container.Provide(service.NewEmbedChannelService))
 
 	// Web search service (needed by AgentService)
 	logger.Debugf(ctx, "[Container] Registering web search registry and providers...")
@@ -251,22 +210,6 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewStorageBackendServiceWithResources))
 	must(container.Provide(func(s *service.StorageBackendService) interfaces.StorageBackendService { return s }))
 	must(container.Provide(func(s *service.StorageBackendService) interfaces.StorageBackendResolver { return s }))
-
-	// Agent service layer (requires event bus, web search service)
-	// SessionService is passed as parameter to CreateAgentEngine method when creating AgentService
-	logger.Debugf(ctx, "[Container] Registering event bus and agent service...")
-	must(container.Provide(event.NewEventBus))
-	must(container.Provide(func(cfg *config.Config, s interfaces.MCPToolApprovalService, rdb *redis.Client) *approval.Gate {
-		return approval.NewGate(cfg, &approval.Adapter{Svc: s}, rdb)
-	}))
-	// Expose Gate as MCPApproval interface so AgentService and others can depend on the abstraction.
-	must(container.Provide(func(g *approval.Gate) approval.MCPApproval { return g }))
-	must(container.Provide(service.NewAgentService))
-
-	// Session service (depends on agent service)
-	// SessionService is created after AgentService and passes itself to AgentService.CreateAgentEngine when needed
-	logger.Debugf(ctx, "[Container] Registering session service...")
-	must(container.Provide(service.NewSessionService))
 
 	logger.Debugf(ctx, "[Container] Registering task enqueuer...")
 	redisAvailable := os.Getenv("REDIS_ADDR") != ""
@@ -319,76 +262,21 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewHousekeepingService))
 	must(container.Invoke(startHousekeepingService))
 	logger.Debugf(ctx, "[Container] Knowledge housekeeping runner registered")
-	must(container.Provide(chatpipeline.NewEventManager))
-	must(container.Invoke(chatpipeline.NewPluginSearch))
-	must(container.Invoke(chatpipeline.NewPluginRerank))
-	must(container.Invoke(chatpipeline.NewPluginWebFetch))
-	must(container.Invoke(chatpipeline.NewPluginMerge))
-	must(container.Invoke(chatpipeline.NewPluginDataAnalysis))
-	must(container.Invoke(chatpipeline.NewPluginIntoChatMessage))
-	must(container.Invoke(chatpipeline.NewPluginChatCompletion))
-	must(container.Invoke(chatpipeline.NewPluginChatCompletionStream))
-	must(container.Invoke(chatpipeline.NewPluginFilterTopK))
-	must(container.Invoke(chatpipeline.NewPluginQueryUnderstand))
-	must(container.Invoke(chatpipeline.NewPluginLoadHistory))
-	must(container.Invoke(chatpipeline.NewPluginExtractEntity))
-	must(container.Invoke(chatpipeline.NewPluginSearchEntity))
-	must(container.Invoke(chatpipeline.NewPluginSearchParallel))
-	must(container.Invoke(chatpipeline.NewPluginWikiBoost))
-	logger.Debugf(ctx, "[Container] Chat pipeline plugins registered")
-
 	// HTTP handlers layer
 	logger.Debugf(ctx, "[Container] Registering HTTP handlers...")
-	must(container.Provide(handler.NewTenantHandler))
-	must(container.Provide(handler.NewTenantMemberHandler))
-	must(container.Provide(handler.NewTenantInvitationHandler))
 	must(container.Provide(handler.NewAuditLogHandler))
 	must(container.Provide(handler.NewKnowledgeBaseHandler))
 	must(container.Provide(handler.NewKnowledgeHandler))
 	must(container.Provide(handler.NewChunkHandler))
 	must(container.Provide(handler.NewFAQHandler))
 	must(container.Provide(handler.NewTagHandler))
-	must(container.Provide(session.NewHandler))
-	must(container.Provide(handler.NewMessageHandler))
-	must(container.Provide(handler.NewMessageSuggestionHandler))
-	must(container.Provide(handler.NewModelHandler))
-	must(container.Provide(handler.NewEvaluationHandler))
-	must(container.Provide(handler.NewInitializationHandler))
-	must(container.Provide(handler.NewAuthHandler))
-	must(container.Provide(handler.NewSystemHandler))
-	must(container.Provide(handler.NewMCPServiceHandler))
-	must(container.Provide(handler.NewMCPCredentialsHandler))
-	must(container.Provide(handler.NewMCPOAuthHandler))
-	must(container.Provide(handler.NewModelCredentialsHandler))
-	must(container.Provide(handler.NewWebSearchProviderCredentialsHandler))
 	must(container.Provide(handler.NewDataSourceCredentialsHandler))
-	must(container.Provide(handler.NewWebSearchHandler))
-	must(container.Provide(handler.NewWebSearchProviderHandler))
-	must(container.Provide(handler.NewVectorStoreHandler))
-	must(container.Provide(handler.NewStorageBackendHandler))
-	must(container.Provide(handler.NewCustomAgentHandler))
-	must(container.Provide(handler.NewUserResourceFavoriteHandler))
-	must(container.Provide(service.NewSkillService))
-	must(container.Provide(handler.NewSkillHandler))
-	must(container.Provide(handler.NewOrganizationHandler))
 
 	// Data source handler
 	must(container.Provide(handler.NewDataSourceHandler))
 	// Wiki page handler
 	must(container.Provide(handler.NewWikiPageHandler))
-	// IM integration
-	logger.Debugf(ctx, "[Container] Registering IM integration...")
-	must(container.Provide(imPkg.NewService))
-	must(container.Invoke(registerIMService))
-	must(container.Provide(handler.NewIMHandler))
-	must(container.Provide(handler.NewEmbedChannelHandler))
-	must(container.Provide(handler.NewWeKnoraCloudHandler))
 	logger.Debugf(ctx, "[Container] HTTP handlers registered")
-
-	// Wire the chat package's local image resolver so multimodal chat can read
-	// local:// images that live under a tenant's configured storage PathPrefix
-	// (which is not encoded in the local:// URL).
-	must(container.Invoke(registerChatLocalImageResolver))
 
 	// Router configuration
 	logger.Debugf(ctx, "[Container] Registering router and starting task server...")
@@ -414,58 +302,6 @@ func BuildContainer(container *dig.Container) *dig.Container {
 // disk bytes requires rebuilding the FileService from that tenant's storage
 // config. The owning tenant is parsed from the URL's first path segment, which
 // correctly handles cross-tenant shared resources (e.g. shared KB images).
-func registerChatLocalImageResolver(
-	tenantRepo interfaces.TenantRepository,
-	storageResolver interfaces.StorageBackendResolver,
-	resourceCatalog interfaces.ResourceCatalog,
-) {
-	chat.LocalImageResolver = func(storageURL string) ([]byte, bool) {
-		ctx := context.Background()
-		physicalPath, resource, err := resourceCatalog.ResolvePath(ctx, storageURL)
-		if err != nil {
-			return nil, false
-		}
-		tenantID := secutils.ParseTenantIDFromStoragePath(physicalPath)
-		if resource != nil {
-			tenantID = resource.TenantID
-		}
-		if tenantID == 0 {
-			return nil, false
-		}
-		tenant, err := tenantRepo.GetTenantByID(ctx, tenantID)
-		if err != nil || tenant == nil {
-			return nil, false
-		}
-		baseDir := strings.TrimSpace(os.Getenv("LOCAL_STORAGE_BASE_DIR"))
-		backendID, inner, scoped := types.ParseStorageBackendPath(physicalPath)
-		if resource != nil && resource.StorageBackendID != "" {
-			backendID = resource.StorageBackendID
-		}
-		providerPath := physicalPath
-		if scoped {
-			providerPath = inner
-		}
-		provider := types.ParseProviderScheme(providerPath)
-		if provider == "" {
-			provider = "local"
-		}
-		fileSvc, _, err := storageResolver.ResolveFileService(ctx, tenant, backendID, provider, baseDir)
-		if err != nil {
-			return nil, false
-		}
-		rc, err := fileSvc.GetFile(ctx, physicalPath)
-		if err != nil {
-			return nil, false
-		}
-		defer rc.Close()
-		data, err := io.ReadAll(rc)
-		if err != nil {
-			return nil, false
-		}
-		return data, true
-	}
-}
-
 // must is a helper function for error handling
 // Panics if the error is not nil, useful for configuration steps that must succeed
 // Parameters:
@@ -486,7 +322,7 @@ func initLangfuse() (*langfuse.Manager, error) {
 }
 
 // defaultModelMaxConcurrency is the per-model cap on concurrent background
-// (ingestion/enrichment) chat calls when WEKNORA_MODEL_MAX_CONCURRENCY /
+// 未配置模型最大并发环境变量或系统设置时，限制后台入库和富化调用，
 // model.max_concurrency is unset. summary / question / graph enrichment all
 // share the same model, so this bounds their combined pressure on one provider
 // across every replica. Interactive chat is never gated.
@@ -501,7 +337,7 @@ func resolveModelMaxConcurrency(ss interfaces.SystemSettingService) int {
 		return defaultModelMaxConcurrency
 	}
 	return int(ss.GetInt(context.Background(), "model.max_concurrency",
-		"WEKNORA_MODEL_MAX_CONCURRENCY", int64(defaultModelMaxConcurrency)))
+		"DIXIAN_KNOWLEDGE_MODEL_MAX_CONCURRENCY", int64(defaultModelMaxConcurrency)))
 }
 
 // registerModelConcurrencyLimiter builds the Redis-backed per-model background
@@ -1564,33 +1400,6 @@ func registerWebSearchProviders(registry *infra_web_search.Registry) {
 	registry.Register("searxng", infra_web_search.NewSearxngProvider)
 	registry.Register("keenable", infra_web_search.NewKeenableProvider)
 	registry.Register("zhipu", infra_web_search.NewZhipuProvider)
-}
-
-// registerIMService registers adapter factories, loads enabled channels, and
-// wires the process-lifetime shutdown hook. Each platform's factory lives in
-// its own subpackage to keep this file focused on wiring.
-func registerIMService(imService *imPkg.Service, cleaner interfaces.ResourceCleaner) {
-	imService.RegisterAdapterFactory("wecom", wecom.NewFactory())
-	imService.RegisterAdapterFactory("feishu", feishu.NewFactory(feishu.RegionFeishu))
-	// Lark is Feishu's international cloud: same adapter, different host/tenant.
-	imService.RegisterAdapterFactory("lark", feishu.NewFactory(feishu.RegionLark))
-	imService.RegisterAdapterFactory("slack", slack.NewFactory())
-	imService.RegisterAdapterFactory("telegram", telegram.NewFactory())
-	imService.RegisterAdapterFactory("dingtalk", dingtalk.NewFactory())
-	imService.RegisterAdapterFactory("mattermost", mattermost.NewFactory())
-	imService.RegisterAdapterFactory("wechat", wechat.NewFactory())
-	imService.RegisterAdapterFactory("qqbot", qqbot.NewFactory())
-	imService.RegisterAdapterFactory("yunzhijia", yunzhijia.NewFactory())
-
-	// Load and start all enabled channels from database
-	if err := imService.LoadAndStartChannels(); err != nil {
-		logger.Warnf(context.Background(), "[IM] Failed to load channels from database: %v", err)
-	}
-
-	cleaner.RegisterWithName("IMService", func() error {
-		imService.Stop()
-		return nil
-	})
 }
 
 // initConnectorRegistry creates and populates the connector registry with all available connectors.

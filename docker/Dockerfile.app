@@ -96,11 +96,8 @@ COPY --from=builder /app/config ./config
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/dataset/samples ./dataset/samples
-COPY --from=builder /app/skills/preloaded ./skills/preloaded
-# Keep a read-only backup so bind-mount cannot erase built-in skills
-COPY --from=builder /app/skills/preloaded ./skills/_builtin
 COPY --from=builder /root/.duckdb /home/appuser/.duckdb
-COPY --from=builder /app/WeKnora .
+COPY --from=builder /app/dixian-knowledge .
 
 # Copy and make entrypoint script executable
 COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
@@ -113,4 +110,4 @@ EXPOSE 8080
 
 
 ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
-CMD ["./WeKnora"]
+CMD ["./dixian-knowledge"]

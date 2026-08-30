@@ -122,7 +122,7 @@ func TestResolveLanguage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envLang != "" {
-				t.Setenv("WEKNORA_LANGUAGE", tt.envLang)
+				t.Setenv("DIXIAN_KNOWLEDGE_LANGUAGE", tt.envLang)
 			}
 			if got := ResolveLanguage(tt.ctx, tt.locale); got != tt.expected {
 				t.Errorf("ResolveLanguage(_, %q) = %q, want %q", tt.locale, got, tt.expected)

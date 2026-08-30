@@ -181,10 +181,6 @@ func (f *fakeTenantService) GetTenantByIDForUser(
 	return f.tenant, nil
 }
 
-func (f *fakeTenantService) GetWeKnoraCloudCredentials(ctx context.Context) *types.WeKnoraCloudCredentials {
-	return nil
-}
-
 var (
 	_ interfaces.EmbedChannelService = (*fakeEmbedChannelService)(nil)
 	_ interfaces.TenantService       = (*fakeTenantService)(nil)

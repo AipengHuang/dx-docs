@@ -55,11 +55,11 @@ type AsynqTaskParams struct {
 // raise the default to 500ms while still allowing operators to tune via env.
 const defaultRedisOpTimeoutMs = 500
 
-// readRedisOpTimeoutMs reads WEKNORA_REDIS_OP_TIMEOUT_MS, falling back to
+// readRedisOpTimeoutMs reads DIXIAN_KNOWLEDGE_REDIS_OP_TIMEOUT_MS, falling back to
 // defaultRedisOpTimeoutMs on missing/invalid input. Kept as a separate helper
 // so both ReadTimeout and WriteTimeout share the same source of truth.
 func readRedisOpTimeoutMs() int {
-	if v := strings.TrimSpace(os.Getenv("WEKNORA_REDIS_OP_TIMEOUT_MS")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("DIXIAN_KNOWLEDGE_REDIS_OP_TIMEOUT_MS")); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
 			return parsed
 		}
@@ -215,7 +215,7 @@ func NewSharedAsynqServer(svc interfaces.SystemSettingService) *asynq.Server {
 
 // NewWikiAsynqServer builds the dedicated wiki pool: QueueWiki only. It runs
 // the shared handler mux but only ever pulls wiki tasks, so its concurrency
-// budget (WEKNORA_WIKI_ASYNQ_CONCURRENCY, default 8) is spent exclusively on
+// 该并发预算默认是 8，只供 Wiki 生成使用，
 // wiki generation. This is the hard capacity isolation that prevents the parse
 // pipeline from starving wiki (and vice-versa) during concurrent uploads.
 func NewWikiAsynqServer(svc interfaces.SystemSettingService) *asynq.Server {

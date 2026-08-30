@@ -123,6 +123,11 @@ func TestSSRFSafeURL(t *testing.T) {
 
 func TestSSRFSafeURL_AllowPublicDomain(t *testing.T) {
 	t.Parallel()
+	for _, ip := range mustLookupIP(t, "example.com") {
+		if restricted, _ := isRestrictedIP(ip); restricted {
+			t.Skip("public DNS is mapped to a reserved test network")
+		}
+	}
 
 	ok, reason := isSSRFSafeURL("https://example.com/path")
 	if !ok {
@@ -132,6 +137,15 @@ func TestSSRFSafeURL_AllowPublicDomain(t *testing.T) {
 		}
 		t.Fatalf("expected public domain to be allowed, got ok=%v reason=%q", ok, reason)
 	}
+}
+
+func mustLookupIP(t *testing.T, hostname string) []net.IP {
+	t.Helper()
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		t.Skipf("DNS unavailable: %v", err)
+	}
+	return ips
 }
 
 // TestValidateURLForSSRF_IPv6Whitelist verifies that whitelisted IPv6 addresses

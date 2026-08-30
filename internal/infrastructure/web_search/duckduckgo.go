@@ -149,7 +149,7 @@ func (p *DuckDuckGoProvider) searchAPI(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("User-Agent", "WeKnora/1.0")
+	req.Header.Set("User-Agent", "Dixian-Knowledge/1.0")
 
 	resp, err := p.client.Do(req)
 	if err != nil {

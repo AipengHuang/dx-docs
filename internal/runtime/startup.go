@@ -65,8 +65,8 @@ type envVarSpec struct {
 
 // startupEnvVars lists the env vars whose presence is most worth
 // surfacing at boot — primarily security-sensitive ones whose silent
-// absence has caused real incidents (SYSTEM_AES_KEY rotation, JWT secret
-// drift) plus the basic DB / storage selectors that change behaviour
+// absence has caused real incidents plus the basic DB / storage selectors
+// that change behaviour
 // significantly.
 //
 // Keep the list short — this banner exists to answer "is the config I
@@ -74,7 +74,6 @@ type envVarSpec struct {
 var startupEnvVars = []envVarSpec{
 	// Security
 	{name: "SYSTEM_AES_KEY", sensitive: true},
-	{name: "JWT_SECRET", sensitive: true},
 	// Runtime
 	{name: "GIN_MODE"},
 	{name: "AUTO_MIGRATE"},

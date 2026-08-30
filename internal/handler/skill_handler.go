@@ -59,7 +59,7 @@ func (h *SkillHandler) ListSkills(c *gin.Context) {
 	}
 
 	// skills_available: true only when sandbox is enabled (docker or local), so frontend can hide/disable Skills UI
-	sandboxMode := os.Getenv("WEKNORA_SANDBOX_MODE")
+	sandboxMode := os.Getenv("DIXIAN_KNOWLEDGE_SANDBOX_MODE")
 	skillsAvailable := sandboxMode != "" && sandboxMode != "disabled"
 
 	logger.Infof(ctx, "skills_available: %v, sandboxMode: %s", skillsAvailable, sandboxMode)

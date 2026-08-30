@@ -1723,22 +1723,6 @@ func (h *InitializationHandler) buildTestModel(
 	}
 }
 
-// resolveTenantWeKnoraCloudCreds 从当前空间上下文里取出 WeKnoraCloud 凭证，
-// 供测试连接端点补齐 appID/appSecret。与 service.resolveWeKnoraCloudCredentials
-// 对应，但因为 handler 还没有被注入 tenantService（历史原因），暂时从
-// TenantInfoFromContext 读取，等效果相同。
-func (h *InitializationHandler) resolveTenantWeKnoraCloudCreds(ctx context.Context) (string, string, bool) {
-	tenantInfo, ok := types.TenantInfoFromContext(ctx)
-	if !ok {
-		return "", "", false
-	}
-	creds := tenantInfo.Credentials.GetWeKnoraCloud()
-	if creds == nil {
-		return "", "", true
-	}
-	return creds.AppID, creds.AppSecret, true
-}
-
 // CheckRemoteModel godoc
 // @Summary      检查远程模型
 // @Description  检查远程API模型连接是否正常
@@ -1775,15 +1759,8 @@ func (h *InitializationHandler) CheckRemoteModel(c *gin.Context) {
 		c.Error(errors.NewBadRequestError(utils.FormatSSRFError("Base URL", req.BaseURL, err)))
 		return
 	}
-	appID, appSecret, ok := h.resolveTenantWeKnoraCloudCreds(ctx)
-	if !ok {
-		logger.Error(ctx, "Tenant info not found")
-		c.Error(errors.NewBadRequestError("空间信息未找到"))
-		return
-	}
-
 	model := h.buildTestModel(&req, types.ModelTypeKnowledgeQA, types.ModelSourceRemote)
-	available, message := h.checkChatModelConnection(ctx, model, appID, appSecret)
+	available, message := h.checkChatModelConnection(ctx, model)
 
 	logger.Infof(ctx, "Remote model check completed, available: %v, message: %s", available, message)
 
@@ -1849,15 +1826,8 @@ func (h *InitializationHandler) TestEmbeddingModel(c *gin.Context) {
 		}
 	}
 
-	appID, appSecret, ok := h.resolveTenantWeKnoraCloudCreds(ctx)
-	if !ok {
-		logger.Error(ctx, "Tenant info not found")
-		c.Error(errors.NewBadRequestError("空间信息未找到"))
-		return
-	}
-
 	model := h.buildTestModel(&req, types.ModelTypeEmbedding, types.ModelSourceRemote)
-	emb, err := embedding.NewEmbedder(embedding.ConfigFromModel(model, appID, appSecret), h.pooler, h.ollamaService)
+	emb, err := embedding.NewEmbedder(embedding.ConfigFromModel(model), h.pooler, h.ollamaService)
 	if err != nil {
 		logger.ErrorWithFields(ctx, err, map[string]interface{}{"model": utils.SanitizeForLog(req.ModelName)})
 		c.JSON(http.StatusOK, gin.H{
@@ -1911,9 +1881,9 @@ func classifyConnectionError(errMsg string) string {
 // 与生产路径走完全相同的 ConfigFromModel → NewChat 流程，因此 CustomHeaders、
 // ExtraConfig、Provider 等字段都会被正确透传。
 func (h *InitializationHandler) checkChatModelConnection(
-	ctx context.Context, model *types.Model, appID, appSecret string,
+	ctx context.Context, model *types.Model,
 ) (bool, string) {
-	chatInstance, err := chat.NewChat(chat.ConfigFromModel(model, appID, appSecret), h.ollamaService)
+	chatInstance, err := chat.NewChat(chat.ConfigFromModel(model), h.ollamaService)
 	if err != nil {
 		return false, fmt.Sprintf("创建聊天实例失败: %v", err)
 	}
@@ -1947,9 +1917,9 @@ func (h *InitializationHandler) checkChatModelConnection(
 // checkRerankModelConnection 使用 rerank 模块做一次最小化调用来测试连通性与鉴权。
 // 与生产路径共用 ConfigFromModel，所有字段（CustomHeaders 等）都透传。
 func (h *InitializationHandler) checkRerankModelConnection(
-	ctx context.Context, model *types.Model, appID, appSecret string,
+	ctx context.Context, model *types.Model, appSecret string,
 ) (bool, string) {
-	reranker, err := rerank.NewReranker(rerank.ConfigFromModel(model, appID, appSecret))
+	reranker, err := rerank.NewReranker(rerank.ConfigFromModel(model, appSecret))
 	if err != nil {
 		return false, fmt.Sprintf("创建Reranker失败: %v", err)
 	}
@@ -2001,19 +1971,12 @@ func (h *InitializationHandler) CheckRerankModel(c *gin.Context) {
 		return
 	}
 
-	appID, appSecret, ok := h.resolveTenantWeKnoraCloudCreds(ctx)
-	if !ok {
-		logger.Error(ctx, "Tenant info not found")
-		c.Error(errors.NewBadRequestError("空间信息未找到"))
-		return
-	}
-
 	model := h.buildTestModel(&req, types.ModelTypeRerank, types.ModelSourceRemote)
+	appSecret := ""
 	if providerName := provider.ProviderName(model.Parameters.Provider); providerName == provider.ProviderLKEAP || providerName == provider.ProviderVolcengine {
-		appID = ""
 		appSecret = decryptModelAppSecret(model.Parameters.AppSecret)
 	}
-	available, message := h.checkRerankModelConnection(ctx, model, appID, appSecret)
+	available, message := h.checkRerankModelConnection(ctx, model, appSecret)
 
 	logger.Infof(ctx, "Rerank model check completed, available: %v, message: %s", available, message)
 
@@ -2063,7 +2026,7 @@ func (h *InitializationHandler) CheckASRModel(c *gin.Context) {
 		return
 	}
 
-	// 用统一构造器生成测试用 *types.Model（ASR 不涉及 WeKnoraCloud 凭证），
+	// 用统一构造器生成测试用 *types.Model，
 	// 发送一段极短的静默 WAV 音频验证 /v1/audio/transcriptions 端点可达。
 	model := h.buildTestModel(&req, types.ModelTypeASR, types.ModelSourceRemote)
 	asrInstance, err := asr.NewASR(asr.ConfigFromModel(model))

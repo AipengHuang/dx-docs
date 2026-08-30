@@ -76,7 +76,7 @@ func (h *HousekeepingService) Start(ctx context.Context) error {
 		return nil
 	}
 	if !housekeepingEnabled() {
-		logger.Infof(ctx, "[Housekeeping] disabled via WEKNORA_HOUSEKEEPING_ENABLED=false")
+		logger.Infof(ctx, "[Housekeeping] disabled via DIXIAN_KNOWLEDGE_HOUSEKEEPING_ENABLED=false")
 		return nil
 	}
 	// Every 5 minutes — frequent enough that user-visible recovery latency
@@ -342,7 +342,7 @@ func housekeepingEnabled() bool {
 	// Default-on: missing/empty env enables the sweep. Operators must
 	// explicitly set "false" to opt out, matching the plan's commitment
 	// that no env change is required for the safety net to engage.
-	v := strings.TrimSpace(os.Getenv("WEKNORA_HOUSEKEEPING_ENABLED"))
+	v := strings.TrimSpace(os.Getenv("DIXIAN_KNOWLEDGE_HOUSEKEEPING_ENABLED"))
 	if v == "" {
 		return true
 	}

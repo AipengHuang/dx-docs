@@ -10,6 +10,7 @@ import (
 
 	"github.com/Tencent/WeKnora/internal/middleware"
 	"github.com/Tencent/WeKnora/internal/types"
+	secutils "github.com/Tencent/WeKnora/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,10 +50,6 @@ func (s *stubTenantService) BulkSetStorageQuota(context.Context, int64) (int64, 
 func (s *stubTenantService) GetTenantByIDForUser(context.Context, uint64, string) (*types.Tenant, error) {
 	return s.tenant, nil
 }
-func (s *stubTenantService) GetWeKnoraCloudCredentials(context.Context) *types.WeKnoraCloudCredentials {
-	return nil
-}
-
 func newTenantHandlerTestEngine(t *testing.T, role types.TenantRole, tenant *types.Tenant) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -163,10 +160,13 @@ func TestGetTenantKVViewerAllowedForNonSecretKey(t *testing.T) {
 }
 
 func TestPutTenantParserConfigAdminPreservesRedactedSecrets(t *testing.T) {
+	secutils.SetSSRFWhitelistFromRaw("api.openai.com")
+	t.Cleanup(secutils.ResetSSRFWhitelistForTest)
+
 	tenant := secretTenantFixture()
 	engine := newTenantHandlerTestEngine(t, types.TenantRoleAdmin, tenant)
 
-	body := `{"mineru_api_key":"***","mineru_endpoint":"https://example.com/mineru"}`
+	body := `{"mineru_api_key":"***","mineru_endpoint":"https://api.openai.com/mineru"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/tenants/kv/parser-engine-config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -174,5 +174,5 @@ func TestPutTenantParserConfigAdminPreservesRedactedSecrets(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.NotNil(t, tenant.ParserEngineConfig)
 	assert.Equal(t, "parser-secret-123", tenant.ParserEngineConfig.MinerUAPIKey)
-	assert.Equal(t, "https://example.com/mineru", tenant.ParserEngineConfig.MinerUEndpoint)
+	assert.Equal(t, "https://api.openai.com/mineru", tenant.ParserEngineConfig.MinerUEndpoint)
 }

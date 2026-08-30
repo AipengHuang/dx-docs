@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Tencent/WeKnora/internal/types"
+	secutils "github.com/Tencent/WeKnora/internal/utils"
 )
 
 // Yuque's runtime API returns the doc `status` field as an integer (0 or 1),
@@ -83,6 +84,9 @@ func TestV2Doc_Status_RejectsUnexpectedShapes(t *testing.T) {
 }
 
 func TestParseYuqueConfig(t *testing.T) {
+	secutils.SetSSRFWhitelistFromRaw("company.yuque.com,www.yuque.com")
+	t.Cleanup(secutils.ResetSSRFWhitelistForTest)
+
 	t.Run("valid full", func(t *testing.T) {
 		cfg, err := parseYuqueConfig(&types.DataSourceConfig{
 			Credentials: map[string]interface{}{

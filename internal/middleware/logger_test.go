@@ -1,6 +1,47 @@
 package middleware
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+)
+
+func TestRequestIDEchoesValidLogNumber(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(RequestID())
+	router.GET("/health", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	for _, testCase := range []struct {
+		name       string
+		value      string
+		shouldEcho bool
+	}{
+		{name: "valid", value: "LOG-01M175YS8WZ3ZK6SZR2MZ5B6S6", shouldEcho: true},
+		{name: "invalid character", value: "LOG-01M175YS8WZ3ZK6SZR2MZ5B6SI", shouldEcho: false},
+		{name: "invalid length", value: "LOG-123", shouldEcho: false},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/health", nil)
+			request.Header.Set(logNumberHeader, testCase.value)
+			response := httptest.NewRecorder()
+
+			router.ServeHTTP(response, request)
+
+			got := response.Header().Get(logNumberHeader)
+			if testCase.shouldEcho && got != testCase.value {
+				t.Fatalf("log number header = %q, want %q", got, testCase.value)
+			}
+			if !testCase.shouldEcho && got != "" {
+				t.Fatalf("invalid log number header was echoed: %q", got)
+			}
+		})
+	}
+}
 
 func TestSanitizeBody(t *testing.T) {
 	cases := []struct {

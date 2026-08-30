@@ -35,9 +35,7 @@ type ModelResponse struct {
 }
 
 // ModelParametersDTO carries every parameter field EXCEPT the two secret
-// ones (APIKey, AppSecret). AppID is non-secret and stays — it's an account
-// identifier the WeKnora Cloud frontend renders. CustomHeaders is also kept
-// (structural metadata, not a credential).
+// ones (APIKey, AppSecret). CustomHeaders is structural metadata.
 type ModelParametersDTO struct {
 	BaseURL             string                    `json:"base_url"`
 	InterfaceType       string                    `json:"interface_type"`
@@ -48,7 +46,6 @@ type ModelParametersDTO struct {
 	CustomHeaders       map[string]string         `json:"custom_headers,omitempty"`
 	SupportsVision      bool                      `json:"supports_vision"`
 	MaxConcurrency      int                       `json:"max_concurrency,omitempty"`
-	AppID               string                    `json:"app_id,omitempty"`
 }
 
 // NewModelResponse converts a stored Model into its response shape.
@@ -69,7 +66,6 @@ func NewModelResponse(ctx context.Context, m *types.Model) *ModelResponse {
 		CustomHeaders:       m.Parameters.CustomHeaders,
 		SupportsVision:      m.Parameters.SupportsVision,
 		MaxConcurrency:      m.Parameters.MaxConcurrency,
-		AppID:               m.Parameters.AppID,
 	}
 	canManageBuiltin := m.IsBuiltin && types.IsSystemAdminFromContext(ctx)
 	if !CanViewIntegrationSecrets(ctx) && !canManageBuiltin {
@@ -85,7 +81,6 @@ func NewModelResponse(ctx context.Context, m *types.Model) *ModelResponse {
 		params.BaseURL = ""
 		params.ExtraConfig = nil
 		params.CustomHeaders = nil
-		params.AppID = ""
 	}
 	var creds map[string]CredentialFieldMetadata
 	if !m.IsBuiltin || canManageBuiltin {

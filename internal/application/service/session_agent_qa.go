@@ -500,7 +500,7 @@ func (s *sessionService) configureSkillsFromAgent(
 		return
 	}
 	// When sandbox is disabled, skills cannot be enabled (no script execution environment)
-	sandboxMode := os.Getenv("WEKNORA_SANDBOX_MODE")
+	sandboxMode := os.Getenv("DIXIAN_KNOWLEDGE_SANDBOX_MODE")
 	if sandboxMode == "" || sandboxMode == "disabled" {
 		agentConfig.SkillsEnabled = false
 		agentConfig.SkillDirs = nil

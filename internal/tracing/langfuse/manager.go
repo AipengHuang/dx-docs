@@ -54,7 +54,7 @@ func Init(cfg Config) (*Manager, error) {
 	m := &Manager{cfg: cfg}
 	if cfg.Enabled {
 		resAttrs := []attribute.KeyValue{
-			attribute.String("service.name", "weknora"),
+			attribute.String("service.name", "dixian-knowledge"),
 			attribute.String(attrLangfusePubKey, cfg.PublicKey),
 		}
 		if cfg.Environment != "" {

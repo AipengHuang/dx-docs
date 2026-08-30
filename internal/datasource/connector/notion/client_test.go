@@ -349,7 +349,7 @@ func TestClientQueryDatabaseAll(t *testing.T) {
 var _ = time.Now
 
 func TestDownloadFile_RejectsLoopbackURL(t *testing.T) {
-	secutils.ResetSSRFWhitelistForTest()
+	secutils.SetSSRFWhitelistFromRaw("api.notion.com")
 	t.Cleanup(secutils.ResetSSRFWhitelistForTest)
 
 	client, err := newClient("test-token", "https://api.notion.com")
