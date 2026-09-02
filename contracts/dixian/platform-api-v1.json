@@ -811,7 +811,7 @@
     "/rbac/proposals/suggest": {
       "post": {
         "operationId": "suggestPermissionChangeProposal",
-        "summary": "Convert a narrow natural-language permission request into a draft proposal",
+        "summary": "Create a draft permission proposal from typed identifiers and scopes",
         "security": [{ "SessionCookie": [] }],
         "requestBody": {
           "required": true,
@@ -9014,9 +9014,29 @@
       "PermissionProposalSuggestRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["message"],
+        "required": [
+          "target_user_id",
+          "role_code",
+          "action",
+          "source_type",
+          "scopes",
+          "reason"
+        ],
         "properties": {
-          "message": { "type": "string", "minLength": 1, "maxLength": 1000 }
+          "target_user_id": { "$ref": "#/components/schemas/Uuid" },
+          "role_code": { "type": "string", "minLength": 1 },
+          "action": { "type": "string", "const": "grant_role" },
+          "source_type": {
+            "type": "string",
+            "enum": ["direct", "temporary"]
+          },
+          "scopes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/AuthorizationScope" }
+          },
+          "valid_until": { "type": "string", "format": "date-time" },
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
         }
       },
       "PermissionProposalConfirmRequest": {
