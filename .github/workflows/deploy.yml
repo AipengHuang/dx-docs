@@ -1,0 +1,69 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - image: ghcr.io/aipenghuang/dx-docs-knowledge
+            dockerfile: docker/Dockerfile.app
+          - image: ghcr.io/aipenghuang/dx-docs-docreader
+            dockerfile: docker/Dockerfile.docreader
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ matrix.image }}:main
+            ${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.dockerfile }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.dockerfile }}
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_SSH_KEY: ${{ secrets.ECS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$ECS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$ECS_HOST" >> ~/.ssh/known_hosts
+      - name: Deploy knowledge services
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          # shellcheck disable=SC2029
+          printf '%s' "$GHCR_TOKEN" | ssh "$ECS_USER@$ECS_HOST" "docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin"
+          ssh "$ECS_USER@$ECS_HOST" 'cd /opt/dixian && docker compose --env-file .env -f compose.staging.yml pull knowledge docreader && docker compose --env-file .env -f compose.staging.yml up -d --no-deps knowledge docreader'
+          # shellcheck disable=SC2029
+          ssh "$ECS_USER@$ECS_HOST" 'for i in $(seq 1 40); do test "$(docker inspect dixian-staging-knowledge-1 --format "{{.State.Health.Status}}" 2>/dev/null)" = healthy && test "$(docker inspect dixian-staging-docreader-1 --format "{{.State.Health.Status}}" 2>/dev/null)" = healthy && exit 0; sleep 5; done; docker compose -f /opt/dixian/compose.staging.yml ps; exit 1'
