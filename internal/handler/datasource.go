@@ -607,6 +607,6 @@ func (h *DataSourceHandler) GetSyncLog(c *gin.Context) {
 // @Success 200 {object} []datasource.ConnectorMetadata
 // @Router /datasource/types [get]
 func (h *DataSourceHandler) GetAvailableConnectors(c *gin.Context) {
-	connectors := datasource.ListAvailableConnectors()
+	connectors := datasource.MetadataForTypes(h.service.ListAvailableConnectorTypes())
 	c.JSON(http.StatusOK, connectors)
 }

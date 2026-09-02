@@ -2,7 +2,7 @@
 
 package dixiancontract
 
-const ContractSHA256 = "5ce5178d4996e9fb9969e7a39d6155abaedbe50aa040204db333bd57a019ba69"
+const ContractSHA256 = "100d6f37177774d8ef014c86d97be371de954d5aeabc72211b6895e5182709ca"
 
 var RequestContextFields = []string{
 	"request_id",
@@ -69,6 +69,7 @@ const (
 	ErrorCodeAuthForbidden         ErrorCode = "AUTH_FORBIDDEN"
 	ErrorCodeResourceNotFound      ErrorCode = "RESOURCE_NOT_FOUND"
 	ErrorCodeResourceConflict      ErrorCode = "RESOURCE_CONFLICT"
+	ErrorCodeContextInvalid        ErrorCode = "CONTEXT_INVALID"
 	ErrorCodeIdempotencyKeyReused  ErrorCode = "IDEMPOTENCY_KEY_REUSED"
 	ErrorCodeVersionConflict       ErrorCode = "VERSION_CONFLICT"
 	ErrorCodeEventResumeExpired    ErrorCode = "EVENT_RESUME_EXPIRED"
@@ -96,6 +97,7 @@ var ErrorHTTPStatus = map[string]int{
 	string(ErrorCodeAuthForbidden):         403,
 	string(ErrorCodeResourceNotFound):      404,
 	string(ErrorCodeResourceConflict):      409,
+	string(ErrorCodeContextInvalid):        409,
 	string(ErrorCodeIdempotencyKeyReused):  409,
 	string(ErrorCodeVersionConflict):       409,
 	string(ErrorCodeEventResumeExpired):    409,
@@ -199,8 +201,6 @@ var SSERunEventFields = []string{
 }
 
 var IdentitySources = []string{
-	"wecom",
-	"oidc",
 	"local",
 }
 
@@ -221,8 +221,6 @@ var DeviceChannels = []string{
 }
 
 const (
-	IdentitySourceWecom IdentitySource = "wecom"
-	IdentitySourceOidc  IdentitySource = "oidc"
 	IdentitySourceLocal IdentitySource = "local"
 )
 

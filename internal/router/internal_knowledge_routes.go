@@ -21,6 +21,7 @@ func registerInternalKnowledgeBaseRoutes(r *gin.RouterGroup, params RouterParams
 	h := params.KBHandler
 	r.GET("/knowledge-bases", grant(params, middleware.OperationListKnowledgeBases, ""), h.ListKnowledgeBases)
 	r.POST("/knowledge-bases", grant(params, middleware.OperationManageKnowledgeBase, ""), h.CreateKnowledgeBase)
+	r.POST("/knowledge-bases/:id/provision", grant(params, middleware.OperationManageKnowledgeBase, "id"), h.ProvisionPlatformKnowledgeBase)
 	r.GET("/knowledge-bases/:id", grant(params, middleware.OperationViewKnowledgeBase, "id"), h.GetKnowledgeBase)
 	r.PUT("/knowledge-bases/:id", grant(params, middleware.OperationManageKnowledgeBase, "id"), h.UpdateKnowledgeBase)
 	r.DELETE("/knowledge-bases/:id", grant(params, middleware.OperationManageKnowledgeBase, "id"), h.DeleteKnowledgeBase)
@@ -36,6 +37,7 @@ func registerInternalKnowledgeFileRoutes(r *gin.RouterGroup, params RouterParams
 	r.POST("/knowledge-bases/:id/knowledge/file", grant(params, middleware.OperationManageKnowledgeFile, "id"), h.CreateKnowledgeFromFile)
 	r.POST("/knowledge-bases/:id/knowledge/url", grant(params, middleware.OperationManageKnowledgeFile, "id"), h.CreateKnowledgeFromURL)
 	r.POST("/knowledge-bases/:id/knowledge/manual", grant(params, middleware.OperationManageKnowledgeFile, "id"), h.CreateManualKnowledge)
+	r.PUT("/knowledge-bases/:id/knowledge/tags", grant(params, middleware.OperationManageKnowledgeFile, "id"), h.UpdatePlatformKnowledgeTags)
 	r.DELETE("/knowledge-bases/:id/knowledge", grant(params, middleware.OperationManageKnowledgeFile, "id"), h.ClearKnowledgeBaseContents)
 
 	r.GET("/knowledge/:id", grant(params, middleware.OperationViewKnowledgeFile, "id"), h.GetKnowledge)
@@ -73,6 +75,7 @@ func registerInternalMetadataRoutes(r *gin.RouterGroup, params RouterParams) {
 	tags := params.TagHandler
 	r.GET("/knowledge-bases/:id/tags", grant(params, middleware.OperationViewKnowledgeMetadata, "id"), tags.ListTags)
 	r.POST("/knowledge-bases/:id/tags", grant(params, middleware.OperationManageKnowledgeMeta, "id"), tags.CreateTag)
+	r.POST("/knowledge-bases/:id/project-categories", grant(params, middleware.OperationManageKnowledgeMeta, "id"), tags.CreatePlatformCategories)
 	r.PUT("/knowledge-bases/:id/tags/:tag_id", grant(params, middleware.OperationManageKnowledgeMeta, "id"), tags.UpdateTag)
 	r.DELETE("/knowledge-bases/:id/tags/:tag_id", grant(params, middleware.OperationManageKnowledgeMeta, "id"), tags.DeleteTag)
 

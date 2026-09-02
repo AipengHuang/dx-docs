@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+	"sort"
 
 	"github.com/Tencent/WeKnora/internal/types"
 )
@@ -132,6 +133,7 @@ func (r *ConnectorRegistry) List() []string {
 	for t := range r.connectors {
 		types = append(types, t)
 	}
+	sort.Strings(types)
 	return types
 }
 
@@ -271,24 +273,20 @@ var ConnectorMetadataRegistry = map[string]ConnectorMetadata{
 	},
 }
 
-// ListAvailableConnectors returns all available connector metadata
-// sorted by priority
-func ListAvailableConnectors() []ConnectorMetadata {
-	metadata := make([]ConnectorMetadata, 0, len(ConnectorMetadataRegistry))
-	for _, meta := range ConnectorMetadataRegistry {
-		metadata = append(metadata, meta)
-	}
-
-	// Sort by priority (insertion sort for simplicity)
-	for i := 1; i < len(metadata); i++ {
-		key := metadata[i]
-		j := i - 1
-		for j >= 0 && metadata[j].Priority > key.Priority {
-			metadata[j+1] = metadata[j]
-			j--
+// MetadataForTypes 只返回运行时已注册类型的元数据。
+func MetadataForTypes(connectorTypes []string) []ConnectorMetadata {
+	metadata := make([]ConnectorMetadata, 0, len(connectorTypes))
+	for _, connectorType := range connectorTypes {
+		item, exists := ConnectorMetadataRegistry[connectorType]
+		if exists {
+			metadata = append(metadata, item)
 		}
-		metadata[j+1] = key
 	}
-
+	sort.Slice(metadata, func(i, j int) bool {
+		if metadata[i].Priority == metadata[j].Priority {
+			return metadata[i].Type < metadata[j].Type
+		}
+		return metadata[i].Priority < metadata[j].Priority
+	})
 	return metadata
 }

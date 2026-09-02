@@ -2,9 +2,13 @@ package middleware
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -38,13 +42,68 @@ const (
 	OperationManageKnowledgeSource ServiceOperation = "knowledge.source:manage"
 )
 
+var knowledgeTargetTypes = map[ServiceOperation]string{
+	OperationListKnowledgeBases:    "knowledge_base",
+	OperationViewKnowledgeBase:     "knowledge_base",
+	OperationManageKnowledgeBase:   "knowledge_base",
+	OperationListKnowledgeFiles:    "knowledge_file",
+	OperationViewKnowledgeFile:     "knowledge_file",
+	OperationManageKnowledgeFile:   "knowledge_file",
+	OperationSearchKnowledge:       "knowledge_base",
+	OperationViewKnowledgeMetadata: "knowledge_metadata",
+	OperationManageKnowledgeMeta:   "knowledge_metadata",
+	OperationManageKnowledgeSource: "knowledge_source",
+}
+
 type executionGrant struct {
-	UserID         string           `json:"user_id"`
-	Username       string           `json:"username"`
-	OrganizationID string           `json:"organization_id"`
-	Operation      ServiceOperation `json:"operation"`
-	ResourceID     string           `json:"resource_id"`
-	LogNumber      string           `json:"log_number"`
+	AuthorizationContext string `json:"authorization_context"`
+}
+
+type AuthorizationScope struct {
+	Type  string  `json:"type"`
+	Value *string `json:"value,omitempty"`
+}
+
+type AuthorizationGrant struct {
+	AssignmentID string               `json:"assignment_id"`
+	RoleCode     string               `json:"role_code"`
+	SourceType   string               `json:"source_type"`
+	SourceEntity *string              `json:"source_entity_id,omitempty"`
+	ValidFrom    string               `json:"valid_from"`
+	ValidUntil   *string              `json:"valid_until,omitempty"`
+	Scopes       []AuthorizationScope `json:"scopes"`
+}
+
+type AuthorizationPermission struct {
+	PermissionCode string               `json:"permission_code"`
+	Grants         []AuthorizationGrant `json:"grants"`
+}
+
+type AuthorizationTarget struct {
+	Type       string `json:"type"`
+	ResourceID string `json:"resource_id"`
+	Collection bool   `json:"collection"`
+}
+
+type PlatformAuthorizationContext struct {
+	Version           int                       `json:"version"`
+	ContextID         string                    `json:"context_id"`
+	Audience          string                    `json:"audience"`
+	UserID            string                    `json:"user_id"`
+	Username          string                    `json:"username"`
+	OrganizationID    string                    `json:"organization_id"`
+	PermissionCodes   []string                  `json:"permission_codes"`
+	RoleAssignmentIDs []string                  `json:"role_assignment_ids"`
+	Permissions       []AuthorizationPermission `json:"permissions"`
+	ResourceScope     map[string][]string       `json:"resource_scope"`
+	Operation         ServiceOperation          `json:"operation"`
+	Target            AuthorizationTarget       `json:"target"`
+	ResourceID        string                    `json:"resource_id"`
+	ConversationID    *string                   `json:"conversation_id"`
+	ProjectID         *string                   `json:"project_id"`
+	LogNumber         string                    `json:"log_number"`
+	IssuedAt          int64                     `json:"issued_at"`
+	ExpiresAt         int64                     `json:"expires_at"`
 }
 
 var internalHTTPClient = &http.Client{Timeout: 5 * time.Second}
@@ -87,6 +146,8 @@ func RequireExecutionGrant(
 		}
 		if organizationID == "" || resourceID == "" ||
 			grant.Operation != operation ||
+			grant.Target.Type != knowledgeTargetTypes[operation] ||
+			grant.Target.ResourceID != resourceID ||
 			grant.OrganizationID != organizationID ||
 			grant.ResourceID != resourceID ||
 			grant.LogNumber != c.GetHeader(HeaderLogNumber) {
@@ -110,10 +171,20 @@ func RequireExecutionGrant(
 			Principal: types.Principal{Type: types.PrincipalAPIPlatform, ID: grant.UserID},
 			TenantID:  tenant.ID,
 			Tenant:    tenant,
-			Role:      types.TenantRoleOwner,
+			Role:      types.TenantRoleViewer,
 		})
+		c.Set(platformAuthorizationContextKey, grant)
 		c.Next()
 	}
+}
+
+const platformAuthorizationContextKey = "dixian.platform_authorization_context"
+
+// PlatformAuthorizationContextFrom 返回本次真实用户的授权快照。
+func PlatformAuthorizationContextFrom(c *gin.Context) (*PlatformAuthorizationContext, bool) {
+	value, exists := c.Get(platformAuthorizationContextKey)
+	context, valid := value.(*PlatformAuthorizationContext)
+	return context, exists && valid
 }
 
 func validPlatformRequest(request *http.Request) bool {
@@ -132,7 +203,7 @@ func equalSecret(actual, expected string) bool {
 	return subtle.ConstantTimeCompare([]byte(actual), []byte(expected)) == 1
 }
 
-func redeemExecutionGrant(request *http.Request) (*executionGrant, error) {
+func redeemExecutionGrant(request *http.Request) (*PlatformAuthorizationContext, error) {
 	handle := request.Header.Get(HeaderExecutionHandle)
 	if handle == "" {
 		return nil, errors.New("execution handle is required")
@@ -164,7 +235,105 @@ func redeemExecutionGrant(request *http.Request) (*executionGrant, error) {
 	if err := json.NewDecoder(response.Body).Decode(&grant); err != nil {
 		return nil, err
 	}
-	return &grant, nil
+	return verifyAuthorizationContext(
+		grant.AuthorizationContext,
+		os.Getenv("DIXIAN_DOCS_SERVICE_TOKEN"),
+		time.Now().Unix(),
+	)
+}
+
+func verifyAuthorizationContext(token, secret string, now int64) (*PlatformAuthorizationContext, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" || secret == "" {
+		return nil, errors.New("authorization context is invalid")
+	}
+	signature, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, errors.New("authorization context is invalid")
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(parts[0]))
+	if !hmac.Equal(signature, mac.Sum(nil)) {
+		return nil, errors.New("authorization context is invalid")
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, errors.New("authorization context is invalid")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	decoder.DisallowUnknownFields()
+	var context PlatformAuthorizationContext
+	if err := decoder.Decode(&context); err != nil {
+		return nil, errors.New("authorization context is invalid")
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return nil, errors.New("authorization context is invalid")
+	}
+	if !validAuthorizationContext(&context, now) {
+		return nil, errors.New("authorization context is invalid")
+	}
+	return &context, nil
+}
+
+func validAuthorizationContext(context *PlatformAuthorizationContext, now int64) bool {
+	if context.Version != 1 || context.Audience != "dixian-knowledge" ||
+		context.ContextID == "" || context.UserID == "" || context.Username == "" ||
+		context.OrganizationID == "" || context.ResourceID == "" || context.LogNumber == "" ||
+		context.Target.Type == "" || context.Target.ResourceID == "" ||
+		context.IssuedAt >= context.ExpiresAt || context.ExpiresAt <= now ||
+		len(context.PermissionCodes) == 0 || len(context.RoleAssignmentIDs) == 0 ||
+		len(context.Permissions) == 0 ||
+		!containsExact(context.ResourceScope["company"], context.OrganizationID) {
+		return false
+	}
+	if selfScope := context.ResourceScope["self"]; len(selfScope) > 0 &&
+		!containsExact(selfScope, context.UserID) {
+		return false
+	}
+	permissionCodes := make(map[string]struct{}, len(context.Permissions))
+	assignmentIDs := make(map[string]struct{}, len(context.RoleAssignmentIDs))
+	for _, permission := range context.Permissions {
+		if permission.PermissionCode == "" || len(permission.Grants) == 0 {
+			return false
+		}
+		permissionCodes[permission.PermissionCode] = struct{}{}
+		for _, grant := range permission.Grants {
+			if grant.AssignmentID == "" || grant.RoleCode == "" || len(grant.Scopes) == 0 {
+				return false
+			}
+			assignmentIDs[grant.AssignmentID] = struct{}{}
+		}
+	}
+	return sameStringSet(context.PermissionCodes, permissionCodes) &&
+		sameStringSet(context.RoleAssignmentIDs, assignmentIDs)
+}
+
+func containsExact(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func sameStringSet(values []string, expected map[string]struct{}) bool {
+	actual := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if value == "" {
+			return false
+		}
+		actual[value] = struct{}{}
+	}
+	if len(actual) != len(expected) {
+		return false
+	}
+	for value := range actual {
+		if _, exists := expected[value]; !exists {
+			return false
+		}
+	}
+	return true
 }
 
 func resolvePlatformTenant(c *gin.Context, tenantService interfaces.TenantService, organizationID string) (*types.Tenant, error) {

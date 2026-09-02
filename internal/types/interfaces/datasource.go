@@ -9,6 +9,9 @@ import (
 
 // DataSourceService defines the interface for data source management operations
 type DataSourceService interface {
+	// ListAvailableConnectorTypes 返回当前进程实际注册的连接器类型。
+	ListAvailableConnectorTypes() []string
+
 	// CreateDataSource creates a new data source configuration
 	CreateDataSource(ctx context.Context, ds *types.DataSource) (*types.DataSource, error)
 

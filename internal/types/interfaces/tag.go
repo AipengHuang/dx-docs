@@ -13,6 +13,8 @@ type KnowledgeTagService interface {
 	ListTags(ctx context.Context, kbID string, page *types.Pagination, keyword string) (*types.PageResult, error)
 	// CreateTag creates a new tag under a knowledge base.
 	CreateTag(ctx context.Context, kbID string, name string, color string, sortOrder int) (*types.KnowledgeTag, error)
+	// CreatePlatformTag 使用 Platform 管理的稳定 ID 幂等创建标签。
+	CreatePlatformTag(ctx context.Context, kbID string, id string, name string, sortOrder int) (*types.KnowledgeTag, error)
 	// UpdateTag updates tag basic information.
 	UpdateTag(ctx context.Context, id string, name *string, color *string, sortOrder *int) (*types.KnowledgeTag, error)
 	// DeleteTag deletes a tag.

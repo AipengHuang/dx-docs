@@ -36,6 +36,20 @@ type autoTagKnowledgeRepo struct {
 	existing  map[string][]*types.KnowledgeTag
 	added     []string
 	addErr    error
+	metadata  types.JSON
+	updateErr error
+}
+
+func (r *autoTagKnowledgeRepo) UpdateKnowledgeColumn(
+	_ context.Context, _ string, column string, value interface{},
+) error {
+	if r.updateErr != nil {
+		return r.updateErr
+	}
+	if column == "metadata" {
+		r.metadata, _ = value.(types.JSON)
+	}
+	return nil
 }
 
 func (r *autoTagKnowledgeRepo) GetKnowledgeByIDOnly(context.Context, string) (*types.Knowledge, error) {

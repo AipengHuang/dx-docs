@@ -63,6 +63,11 @@ func NewDataSourceService(
 	}
 }
 
+// ListAvailableConnectorTypes 返回当前运行时注册表中的类型。
+func (s *DataSourceService) ListAvailableConnectorTypes() []string {
+	return s.connectorRegistry.List()
+}
+
 // CreateDataSource creates a new data source configuration
 func (s *DataSourceService) CreateDataSource(ctx context.Context, ds *types.DataSource) (*types.DataSource, error) {
 	if ds == nil {

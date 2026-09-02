@@ -17,6 +17,9 @@ operation, creates a one-time execution handle, and calls this service through
 - Every request requires the Platform service identity, a short-lived
   one-time handle, organization ID, resource ID, request ID, and Log Number.
 - Missing or mismatched context is rejected.
+- Cross-Agent discovery, approval, temporary RBAC access, execution, and audit
+  remain in Platform and Runtime. This service receives only the same real user,
+  authorized scopes, and Log Number when a delegated Agent retrieves knowledge.
 
 ## Local verification
 
