@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Tencent/WeKnora/internal/application/repository"
 	"github.com/Tencent/WeKnora/internal/application/service/retriever"
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/storageallowlist"
@@ -13,6 +14,7 @@ import (
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -157,6 +159,35 @@ func ctxWithTenantStorage(tenantID uint64, defaultProvider string) context.Conte
 		},
 	}
 	return context.WithValue(ctx, types.TenantInfoContextKey, tenant)
+}
+
+func TestListKnowledgeBases_DocumentIncludesChunkCount(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE knowledges (id TEXT PRIMARY KEY, tenant_id INTEGER, knowledge_base_id TEXT, parse_status TEXT, deleted_at DATETIME);
+		CREATE TABLE chunks (id TEXT PRIMARY KEY, tenant_id INTEGER, knowledge_base_id TEXT, deleted_at DATETIME);
+		INSERT INTO knowledges (id, tenant_id, knowledge_base_id, parse_status) VALUES ('knowledge-1', 1, 'kb-1', 'completed');
+		INSERT INTO chunks (id, tenant_id, knowledge_base_id) VALUES ('chunk-1', 1, 'kb-1'), ('chunk-2', 1, 'kb-1');
+	`).Error)
+
+	kbRepo := newFakeKBRepo()
+	kbRepo.rows["kb-1"] = &types.KnowledgeBase{
+		ID:       "kb-1",
+		TenantID: 1,
+		Type:     types.KnowledgeBaseTypeDocument,
+	}
+	svc := &knowledgeBaseService{
+		repo:      kbRepo,
+		kgRepo:    repository.NewKnowledgeRepository(db),
+		chunkRepo: repository.NewChunkRepository(db),
+	}
+
+	kbs, err := svc.ListKnowledgeBases(ctxWithTenant(1))
+	require.NoError(t, err)
+	require.Len(t, kbs, 1)
+	assert.Equal(t, int64(1), kbs[0].KnowledgeCount)
+	assert.Equal(t, int64(2), kbs[0].ChunkCount)
 }
 
 func TestCreateKnowledgeBase_DefaultStorageProviderFromTenant(t *testing.T) {

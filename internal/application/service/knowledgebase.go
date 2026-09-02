@@ -360,25 +360,7 @@ func (s *knowledgeBaseService) ListKnowledgeBases(ctx context.Context) ([]*types
 	// Query knowledge count and chunk count for each knowledge base
 	for _, kb := range kbs {
 		kb.EnsureDefaults()
-
-		// Get knowledge count
-		switch kb.Type {
-		case types.KnowledgeBaseTypeDocument:
-			knowledgeCount, err := s.kgRepo.CountKnowledgeByKnowledgeBaseID(ctx, tenantID, kb.ID)
-			if err != nil {
-				logger.Warnf(ctx, "Failed to get knowledge count for knowledge base %s: %v", kb.ID, err)
-			} else {
-				kb.KnowledgeCount = knowledgeCount
-			}
-		case types.KnowledgeBaseTypeFAQ:
-			// Get chunk count
-			chunkCount, err := s.chunkRepo.CountChunksByKnowledgeBaseID(ctx, tenantID, kb.ID)
-			if err != nil {
-				logger.Warnf(ctx, "Failed to get chunk count for knowledge base %s: %v", kb.ID, err)
-			} else {
-				kb.ChunkCount = chunkCount
-			}
-		}
+		fillKnowledgeBaseContentCounts(ctx, kb, tenantID, s.kgRepo, s.chunkRepo)
 
 		// Check if there is a processing import task
 		processingCount, err := s.kgRepo.CountKnowledgeByStatus(
@@ -416,16 +398,7 @@ func (s *knowledgeBaseService) ListKnowledgeBasesByTenantID(ctx context.Context,
 	}
 	for _, kb := range kbs {
 		kb.EnsureDefaults()
-		switch kb.Type {
-		case types.KnowledgeBaseTypeDocument:
-			if cnt, err := s.kgRepo.CountKnowledgeByKnowledgeBaseID(ctx, tenantID, kb.ID); err == nil {
-				kb.KnowledgeCount = cnt
-			}
-		case types.KnowledgeBaseTypeFAQ:
-			if cnt, err := s.chunkRepo.CountChunksByKnowledgeBaseID(ctx, tenantID, kb.ID); err == nil {
-				kb.ChunkCount = cnt
-			}
-		}
+		fillKnowledgeBaseContentCounts(ctx, kb, tenantID, s.kgRepo, s.chunkRepo)
 		if processingCount, err := s.kgRepo.CountKnowledgeByStatus(ctx, tenantID, kb.ID, []string{"pending", "processing"}); err == nil {
 			kb.IsProcessing = processingCount > 0
 			kb.ProcessingCount = processingCount
@@ -450,21 +423,34 @@ func (s *knowledgeBaseService) FillKnowledgeBaseCounts(ctx context.Context, kb *
 	}
 	tenantID := kb.TenantID
 	kb.EnsureDefaults()
-	switch kb.Type {
-	case types.KnowledgeBaseTypeDocument:
-		if cnt, err := s.kgRepo.CountKnowledgeByKnowledgeBaseID(ctx, tenantID, kb.ID); err == nil {
-			kb.KnowledgeCount = cnt
-		}
-	case types.KnowledgeBaseTypeFAQ:
-		if cnt, err := s.chunkRepo.CountChunksByKnowledgeBaseID(ctx, tenantID, kb.ID); err == nil {
-			kb.ChunkCount = cnt
-		}
-	}
+	fillKnowledgeBaseContentCounts(ctx, kb, tenantID, s.kgRepo, s.chunkRepo)
 	if processingCount, err := s.kgRepo.CountKnowledgeByStatus(ctx, tenantID, kb.ID, []string{"pending", "processing"}); err == nil {
 		kb.IsProcessing = processingCount > 0
 		kb.ProcessingCount = processingCount
 	}
 	return nil
+}
+
+func fillKnowledgeBaseContentCounts(
+	ctx context.Context,
+	kb *types.KnowledgeBase,
+	tenantID uint64,
+	kgRepo interfaces.KnowledgeRepository,
+	chunkRepo interfaces.ChunkRepository,
+) {
+	if kb.Type == types.KnowledgeBaseTypeDocument {
+		if count, err := kgRepo.CountKnowledgeByKnowledgeBaseID(ctx, tenantID, kb.ID); err != nil {
+			logger.Warnf(ctx, "Failed to get knowledge count for knowledge base %s: %v", kb.ID, err)
+		} else {
+			kb.KnowledgeCount = count
+		}
+	}
+
+	if count, err := chunkRepo.CountChunksByKnowledgeBaseID(ctx, tenantID, kb.ID); err != nil {
+		logger.Warnf(ctx, "Failed to get chunk count for knowledge base %s: %v", kb.ID, err)
+	} else {
+		kb.ChunkCount = count
+	}
 }
 
 // UpdateKnowledgeBase updates a knowledge base's mutable properties.
