@@ -64,6 +64,6 @@ jobs:
         run: |
           # shellcheck disable=SC2029
           printf '%s' "$GHCR_TOKEN" | ssh "$ECS_USER@$ECS_HOST" "docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin"
-          ssh "$ECS_USER@$ECS_HOST" 'cd /opt/dixian && docker compose --env-file .env -f compose.staging.yml pull knowledge docreader && docker compose --env-file .env -f compose.staging.yml up -d --no-deps knowledge docreader'
+          ssh "$ECS_USER@$ECS_HOST" 'cd /opt/dixian && docker compose --env-file .env -f compose.staging.yml pull knowledge docreader && docker compose --env-file .env -f compose.staging.yml up -d --no-deps --force-recreate knowledge docreader'
           # shellcheck disable=SC2029
           ssh "$ECS_USER@$ECS_HOST" 'for i in $(seq 1 40); do test "$(docker inspect dixian-staging-knowledge-1 --format "{{.State.Health.Status}}" 2>/dev/null)" = healthy && test "$(docker inspect dixian-staging-docreader-1 --format "{{.State.Health.Status}}" 2>/dev/null)" = healthy && exit 0; sleep 5; done; docker compose -f /opt/dixian/compose.staging.yml ps; exit 1'
