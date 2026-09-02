@@ -2165,6 +2165,41 @@
         }
       }
     },
+    "/knowledge-search": {
+      "post": {
+        "operationId": "searchKnowledge",
+        "summary": "Search authorized knowledge bases and return typed result cards",
+        "security": [{ "SessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorized knowledge search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSearchResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "502": { "$ref": "#/components/responses/BadGateway" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" },
+          "504": { "$ref": "#/components/responses/GatewayTimeout" }
+        }
+      }
+    },
     "/projects": {
       "get": {
         "operationId": "listProjects",
@@ -2227,6 +2262,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReadinessTemplateList"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/projects/creation-member-options": {
+      "get": {
+        "operationId": "listProjectCreationMemberOptions",
+        "summary": "List active organization users available during project creation",
+        "security": [{ "SessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Eligible users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectMemberOptions"
                 }
               }
             }
@@ -4912,6 +4968,52 @@
         },
         "additionalProperties": false
       },
+      "KnowledgeSearchRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string", "minLength": 1 },
+          "knowledge_base_ids": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+        },
+        "additionalProperties": false
+      },
+      "KnowledgeSearchHit": {
+        "type": "object",
+        "required": [
+          "knowledge_base_id",
+          "chunk_id",
+          "title",
+          "content",
+          "source",
+          "score"
+        ],
+        "properties": {
+          "knowledge_base_id": { "type": "string", "minLength": 1 },
+          "chunk_id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "content": { "type": "string" },
+          "source": { "type": "string" },
+          "score": { "type": "number" }
+        },
+        "additionalProperties": false
+      },
+      "KnowledgeSearchResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/KnowledgeSearchHit" }
+          }
+        },
+        "additionalProperties": false
+      },
       "ProjectStatus": {
         "type": "string",
         "enum": ["draft", "active", "paused", "closing", "closed", "archived"]
@@ -7164,12 +7266,14 @@
           "child_count",
           "assignment_count",
           "personal_link_count",
+          "project_reference_count",
           "active_execution_count"
         ],
         "properties": {
           "child_count": { "type": "integer", "minimum": 0 },
           "assignment_count": { "type": "integer", "minimum": 0 },
           "personal_link_count": { "type": "integer", "minimum": 0 },
+          "project_reference_count": { "type": "integer", "minimum": 0 },
           "active_execution_count": { "type": "integer", "minimum": 0 }
         }
       },
@@ -7303,8 +7407,6 @@
               "agents",
               "skills",
               "mcp",
-              "models",
-              "channels",
               "users",
               "roles",
               "permission_simulation",
