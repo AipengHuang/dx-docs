@@ -25,11 +25,13 @@ ancestry; preserve existing branch names and all working-tree data.
 - [x] Inventory and fetch.
 - [x] Merge candidates and conflict resolution.
 - [x] Code review and verification.
-- [ ] Publish and prove branch inclusion.
+- [x] Publish and prove branch inclusion.
 
 ## Outcome
 
-In progress.
+All inventoried local and remote branch tips are included in main. The integration
+was pushed without force; the normal checkout now uses main. Existing source
+branches remain available. Remote main was checked against the published commit.
 
 ## Verification result
 
