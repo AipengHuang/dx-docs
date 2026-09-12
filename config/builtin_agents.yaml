@@ -68,7 +68,7 @@ builtin_agents:
     config:
       agent_mode: "smart-reasoning"
       agent_type: "rag-qa"
-      model_id: "dixian-deepseek-v4-flash"
+      model_id: "dixian-glm-5-3"
       rerank_model_id: "dixian-jina-reranker-v2"
       system_prompt: ""
       temperature: 0.7

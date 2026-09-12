@@ -1,18 +1,18 @@
 # 帝显内置对话模型。
 # API 密钥只从 .env 注入；请勿在本文件中写入明文密钥。
 builtin_models:
-  - id: dixian-deepseek-v4-flash
+  - id: dixian-glm-5-3
     tenant_id: 10000
-    name: deepseek-v4-flash
+    name: glm-5.3
     type: KnowledgeQA
     source: remote
     description: 帝显默认对话与智能体模型
     is_default: true
     status: active
     parameters:
-      base_url: https://api.deepseek.com/v1
-      api_key: ${DEEPSEEK_API_KEY}
-      provider: deepseek
+      base_url: https://open.bigmodel.cn/api/paas/v4
+      api_key: ${GLM_API_KEY}
+      provider: zhipu
 
   - id: dixian-jina-reranker-v2
     tenant_id: 10000
