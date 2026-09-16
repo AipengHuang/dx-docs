@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -439,9 +440,6 @@ func (s *sessionService) buildSearchTargets(
 	// Build a map from KB ID to TenantID for all KBs we need to process
 	kbTenantMap := make(map[string]uint64)
 
-	// Track which KBs are fully searched
-	fullKBSet := make(map[string]bool)
-
 	// First pass: batch-fetch KBs, then resolve tenant per ID (tenant scope already set by caller)
 	callerTenantRole := types.TenantRoleFromContext(ctx)
 	kbIDsToFetch := append([]string(nil), knowledgeBaseIDs...)
@@ -487,7 +485,6 @@ func (s *sessionService) buildSearchTargets(
 
 	if len(knowledgeBaseIDs) > 0 {
 		for _, kbID := range knowledgeBaseIDs {
-			fullKBSet[kbID] = true
 			kbTenant := resolveKBTenant(kbID)
 			if len(tagIDsByKB[kbID]) > 0 {
 				continue
@@ -507,7 +504,10 @@ func (s *sessionService) buildSearchTargets(
 		knowledgeList, err := s.knowledgeService.GetKnowledgeBatchWithSharedAccess(ctx, tenantID, knowledgeIDs)
 		if err != nil {
 			logger.Warnf(ctx, "Failed to get knowledge batch for search targets: %v", err)
-			return targets, nil // Return what we have, don't fail
+			return nil, fmt.Errorf("resolve explicit knowledge targets: %w", err)
+		}
+		if len(knowledgeList) != len(uniqueNonEmptyStrings(knowledgeIDs)) {
+			return nil, fmt.Errorf("one or more explicit knowledge targets are unavailable")
 		}
 
 		// Group knowledge IDs by their KB, excluding those already covered by full KB search
@@ -520,14 +520,15 @@ func (s *sessionService) buildSearchTargets(
 			if kbTenantMap[k.KnowledgeBaseID] == 0 {
 				kbTenantMap[k.KnowledgeBaseID] = k.TenantID
 			}
-			// Skip if this KB is already fully searched without a tag scope.
-			if fullKBSet[k.KnowledgeBaseID] && len(tagIDsByKB[k.KnowledgeBaseID]) == 0 {
-				continue
-			}
 			kbToKnowledgeIDs[k.KnowledgeBaseID] = append(kbToKnowledgeIDs[k.KnowledgeBaseID], k.ID)
 		}
 
 		// Create SearchTargetTypeKnowledge targets for each KB with specific files
+		// Explicit documents narrow their KB before recall; a full KB target
+		// must never be unioned back into a document-restricted scope.
+		targets = slices.DeleteFunc(targets, func(target *types.SearchTarget) bool {
+			return target.Type == types.SearchTargetTypeKnowledgeBase && len(kbToKnowledgeIDs[target.KnowledgeBaseID]) > 0
+		})
 		for kbID, kidList := range kbToKnowledgeIDs {
 			if len(tagIDsByKB[kbID]) > 0 {
 				continue

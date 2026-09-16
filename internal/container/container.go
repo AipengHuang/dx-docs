@@ -32,6 +32,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"github.com/Tencent/WeKnora/internal/agent/approval"
 	"github.com/Tencent/WeKnora/internal/application/repository"
 	dorisRepo "github.com/Tencent/WeKnora/internal/application/repository/retriever/doris"
 	elasticsearchRepoV7 "github.com/Tencent/WeKnora/internal/application/repository/retriever/elasticsearch/v7"
@@ -45,6 +46,7 @@ import (
 	tencentVectorDBRepo "github.com/Tencent/WeKnora/internal/application/repository/retriever/tencentvectordb"
 	weaviateRepo "github.com/Tencent/WeKnora/internal/application/repository/retriever/weaviate"
 	"github.com/Tencent/WeKnora/internal/application/service"
+	chatpipeline "github.com/Tencent/WeKnora/internal/application/service/chat_pipeline"
 	"github.com/Tencent/WeKnora/internal/application/service/file"
 	"github.com/Tencent/WeKnora/internal/application/service/retriever"
 	"github.com/Tencent/WeKnora/internal/common"
@@ -57,15 +59,19 @@ import (
 	notionConnector "github.com/Tencent/WeKnora/internal/datasource/connector/notion"
 	rssConnector "github.com/Tencent/WeKnora/internal/datasource/connector/rss"
 	yuqueConnector "github.com/Tencent/WeKnora/internal/datasource/connector/yuque"
+	"github.com/Tencent/WeKnora/internal/event"
 	"github.com/Tencent/WeKnora/internal/handler"
+	"github.com/Tencent/WeKnora/internal/handler/session"
 	"github.com/Tencent/WeKnora/internal/infrastructure/docparser"
 	infra_web_search "github.com/Tencent/WeKnora/internal/infrastructure/web_search"
 	"github.com/Tencent/WeKnora/internal/logger"
+	"github.com/Tencent/WeKnora/internal/mcp"
 	"github.com/Tencent/WeKnora/internal/models/embedding"
 	"github.com/Tencent/WeKnora/internal/models/limiter"
 	"github.com/Tencent/WeKnora/internal/models/utils/ollama"
 	"github.com/Tencent/WeKnora/internal/router"
 	"github.com/Tencent/WeKnora/internal/storageallowlist"
+	"github.com/Tencent/WeKnora/internal/stream"
 	"github.com/Tencent/WeKnora/internal/tracing/langfuse"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
@@ -160,6 +166,22 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewOrganizationService))
 	must(container.Provide(service.NewKBShareService)) // KBShareService must be registered before KnowledgeService and KnowledgeTagService
 	must(container.Provide(service.NewAgentShareService))
+	must(container.Provide(service.NewCustomAgentService))
+	must(container.Provide(mcp.NewMCPManager))
+	must(container.Provide(mcp.NewOAuthManager))
+	must(container.Provide(service.NewMCPServiceService))
+	must(container.Provide(service.NewSkillService))
+	must(container.Provide(service.NewMCPToolApprovalService))
+	must(container.Provide(event.NewEventBus))
+	must(container.Provide(func(cfg *config.Config, s interfaces.MCPToolApprovalService, rdb *redis.Client) *approval.Gate {
+		return approval.NewGate(cfg, &approval.Adapter{Svc: s}, rdb)
+	}))
+	must(container.Provide(func(g *approval.Gate) approval.MCPApproval { return g }))
+	must(container.Provide(service.NewAgentService))
+	must(container.Provide(service.NewSessionService))
+	must(container.Provide(service.NewMessageService))
+	must(container.Provide(service.NewMessageSuggestionService))
+	must(container.Provide(stream.NewStreamManager))
 	must(container.Provide(service.NewKnowledgeService))
 	must(container.Provide(service.NewSpanTracker))
 	must(container.Provide(service.NewChunkService))
@@ -248,7 +270,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Invoke(startTemporaryDocumentCleanup))
 
 	// Chat pipeline components for processing chat requests
-	logger.Debugf(ctx, "[Container] Registering chat pipeline plugins...")
+	must(container.Provide(chatpipeline.NewEventManager))
 
 	// Data source sync framework
 	logger.Debugf(ctx, "[Container] Registering data source sync framework...")
@@ -257,6 +279,22 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(service.NewDataSourceService))
 	must(container.Invoke(startDataSourceScheduler))
 	logger.Debugf(ctx, "[Container] Data source sync framework registered")
+	must(container.Invoke(chatpipeline.NewPluginSearch))
+	must(container.Invoke(chatpipeline.NewPluginRerank))
+	must(container.Invoke(chatpipeline.NewPluginWebFetch))
+	must(container.Invoke(chatpipeline.NewPluginMerge))
+	must(container.Invoke(chatpipeline.NewPluginDataAnalysis))
+	must(container.Invoke(chatpipeline.NewPluginIntoChatMessage))
+	must(container.Invoke(chatpipeline.NewPluginChatCompletion))
+	must(container.Invoke(chatpipeline.NewPluginChatCompletionStream))
+	must(container.Invoke(chatpipeline.NewPluginFilterTopK))
+	must(container.Invoke(chatpipeline.NewPluginQueryUnderstand))
+	must(container.Invoke(chatpipeline.NewPluginLoadHistory))
+	must(container.Invoke(chatpipeline.NewPluginExtractEntity))
+	must(container.Invoke(chatpipeline.NewPluginSearchEntity))
+	must(container.Invoke(chatpipeline.NewPluginSearchParallel))
+	must(container.Invoke(chatpipeline.NewPluginWikiBoost))
+	logger.Debugf(ctx, "[Container] Chat pipeline plugins registered")
 	must(container.Invoke(startAuditLogRetention))
 	logger.Debugf(ctx, "[Container] Audit log retention runner registered")
 	must(container.Provide(service.NewHousekeepingService))
@@ -266,6 +304,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	logger.Debugf(ctx, "[Container] Registering HTTP handlers...")
 	must(container.Provide(handler.NewAuditLogHandler))
 	must(container.Provide(handler.NewKnowledgeBaseHandler))
+	must(container.Provide(handler.NewPlatformAgentHandler))
+	must(container.Provide(session.NewHandler))
 	must(container.Provide(handler.NewKnowledgeHandler))
 	must(container.Provide(handler.NewChunkHandler))
 	must(container.Provide(handler.NewFAQHandler))

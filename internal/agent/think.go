@@ -165,6 +165,9 @@ func (e *AgentEngine) streamThinkingToEventBus(
 	iteration int,
 	sessionID string,
 ) (*types.ChatResponse, error) {
+	if err := types.AuthorizePlatformAgentAction(ctx, "step", "", nil); err != nil {
+		return nil, err
+	}
 	logger.Debugf(ctx, "[Agent][Thinking] Iteration-%d: temp=%.2f, tools=%d, thinking=%v",
 		iteration+1, e.config.Temperature, len(tools), e.config.Thinking)
 
@@ -380,6 +383,9 @@ func (e *AgentEngine) callLLMWithRetry(
 	state *types.AgentState, query string, iteration int, sessionID string,
 ) (*types.ChatResponse, error) {
 	round := iteration + 1
+	if err := types.AuthorizePlatformAgentAction(ctx, "step", "", nil); err != nil {
+		return nil, err
+	}
 
 	// Log message summary; only detail the tail messages to avoid repeating what prior rounds already logged
 	const maxDetailMsgs = 4
@@ -428,7 +434,13 @@ func (e *AgentEngine) callLLMWithRetry(
 			retryDelay := time.Duration(retry) * time.Second
 			logger.Warnf(ctx, "[Agent][Round-%d] LLM transient error (attempt %d/%d), retrying in %v: %v",
 				round, retry, maxLLMRetries, retryDelay, err)
-			time.Sleep(retryDelay)
+			timer := time.NewTimer(retryDelay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, ctx.Err()
+			case <-timer.C:
+			}
 
 			response, err = e.streamThinkingToEventBus(ctx, messages, tools, iteration, sessionID)
 			if err == nil || !isTransientError(err) {

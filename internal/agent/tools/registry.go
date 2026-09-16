@@ -144,6 +144,20 @@ func (r *ToolRegistry) ExecuteTool(
 	// Publish the ceiling so budget-aware tools can shape a batched result
 	// themselves; the truncation below stays as the fallback for the rest.
 	maxOutput := r.getMaxToolOutput()
+	action, resourceID := "tool", name
+	if mcpTool, ok := tool.(*MCPTool); ok {
+		action, resourceID = "mcp", mcpTool.service.ID
+	} else if name == ToolReadSkill || name == ToolExecuteSkillScript {
+		var input struct {
+			SkillName string `json:"skill_name"`
+		}
+		if json.Unmarshal(args, &input) == nil && input.SkillName != "" {
+			action, resourceID = "skill", input.SkillName
+		}
+	}
+	if err := types.AuthorizePlatformAgentAction(ctx, action, resourceID, args); err != nil {
+		return &types.ToolResult{Success: false, Error: "Tool execution is not authorized"}, err
+	}
 	result, execErr := tool.Execute(WithOutputBudget(ctx, maxOutput), args)
 
 	// Truncate large tool outputs to prevent context window poisoning. The

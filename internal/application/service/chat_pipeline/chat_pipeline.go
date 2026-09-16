@@ -71,6 +71,9 @@ func (e *EventManager) buildHandler(plugins []Plugin) func(
 func (e *EventManager) Trigger(ctx context.Context,
 	eventType types.EventType, chatManage *types.ChatManage,
 ) *PluginError {
+	if err := types.AuthorizePlatformAgentAction(ctx, "step", "", nil); err != nil {
+		return &PluginError{Err: err, Description: "Execution not authorized", ErrorType: "authorization_denied"}
+	}
 	if handler, ok := e.handlers[eventType]; ok {
 		return handler(ctx, eventType, chatManage)
 	}

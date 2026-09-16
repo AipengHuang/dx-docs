@@ -155,6 +155,24 @@ func (h *Handler) parseQARequest(c *gin.Context, logPrefix string) (*qaRequestCo
 
 	// Get custom agent if agent_id is provided. Backend resolves shared agent from share relation (no client-provided tenant).
 	customAgent, effectiveTenantID, sharedAgentReadOnly := h.resolveAgent(ctx, c, request.AgentID, request.AgentSourceTenantID)
+	if scope, scoped := types.PlatformAgentScopeFromContext(ctx); scoped {
+		if customAgent == nil {
+			return nil, nil, errors.NewNotFoundError("Expert version not found")
+		}
+		cloned := *customAgent
+		customAgent = &cloned
+		if scope.MaxSteps > 0 && (customAgent.Config.MaxIterations == 0 || customAgent.Config.MaxIterations > scope.MaxSteps) {
+			customAgent.Config.MaxIterations = scope.MaxSteps
+		}
+		customAgent.Config.KnowledgeBases = nil
+		for id := range scope.KnowledgeBases {
+			customAgent.Config.KnowledgeBases = append(customAgent.Config.KnowledgeBases, id)
+		}
+		customAgent.Config.KBSelectionMode = "selected"
+		if len(customAgent.Config.KnowledgeBases) == 0 {
+			customAgent.Config.KBSelectionMode = "none"
+		}
+	}
 	if request.AgentSourceTenantID != 0 && customAgent == nil {
 		return nil, nil, errors.NewNotFoundError("Shared agent not found")
 	}

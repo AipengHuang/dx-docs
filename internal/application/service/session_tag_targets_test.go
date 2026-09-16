@@ -151,6 +151,21 @@ func tagTargetContext() context.Context {
 	return context.WithValue(context.Background(), types.TenantIDContextKey, uint64(100))
 }
 
+func TestBuildSearchTargets_ExplicitDocumentsDoNotWidenToTheirKnowledgeBase(t *testing.T) {
+	svc := newTagTargetSessionService()
+	targets, err := svc.buildSearchTargets(tagTargetContext(), 100, []string{"doc-kb", "faq-kb"}, []string{"doc-1"}, nil)
+	require.NoError(t, err)
+	require.Len(t, targets, 2)
+	for _, target := range targets {
+		if target.KnowledgeBaseID == "doc-kb" {
+			assert.Equal(t, types.SearchTargetTypeKnowledge, target.Type)
+			assert.Equal(t, []string{"doc-1"}, target.KnowledgeIDs)
+		}
+	}
+	_, err = svc.buildSearchTargets(tagTargetContext(), 100, []string{"doc-kb"}, []string{"missing-doc"}, nil)
+	require.Error(t, err, "missing documents must not fall back to full-KB retrieval")
+}
+
 func TestBuildSearchTargets_DocumentTagScopeResolvesKnowledgeIDs(t *testing.T) {
 	svc := newTagTargetSessionService()
 

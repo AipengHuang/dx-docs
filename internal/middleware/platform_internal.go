@@ -20,11 +20,14 @@ import (
 )
 
 const (
-	HeaderExecutionHandle = "X-Dixian-Execution-Handle"
-	HeaderLogNumber       = "X-Log-Number"
-	HeaderOrganizationID  = "X-Dixian-Organization-ID"
-	HeaderRequestID       = "X-Request-ID"
-	HeaderServiceIdentity = "X-Dixian-Service-Identity"
+	OperationViewAgent    ServiceOperation = "native.agent:view"
+	OperationManageAgent  ServiceOperation = "native.agent:manage"
+	OperationExecuteAgent ServiceOperation = "native.agent:execute"
+	HeaderExecutionHandle                  = "X-Dixian-Execution-Handle"
+	HeaderLogNumber                        = "X-Log-Number"
+	HeaderOrganizationID                   = "X-Dixian-Organization-ID"
+	HeaderRequestID                        = "X-Request-ID"
+	HeaderServiceIdentity                  = "X-Dixian-Service-Identity"
 )
 
 type ServiceOperation string
@@ -43,6 +46,9 @@ const (
 )
 
 var knowledgeTargetTypes = map[ServiceOperation]string{
+	OperationViewAgent:             "agent",
+	OperationManageAgent:           "agent",
+	OperationExecuteAgent:          "agent",
 	OperationListKnowledgeBases:    "knowledge_base",
 	OperationViewKnowledgeBase:     "knowledge_base",
 	OperationManageKnowledgeBase:   "knowledge_base",
@@ -106,7 +112,7 @@ type PlatformAuthorizationContext struct {
 	ExpiresAt         int64                     `json:"expires_at"`
 }
 
-var internalHTTPClient = &http.Client{Timeout: 5 * time.Second}
+var internalHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
 // PlatformService 验证唯一控制面对服务的调用身份。
 func PlatformService() gin.HandlerFunc {

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"testing"
@@ -153,4 +154,45 @@ func TestRegisterTool_DuplicateRejected(t *testing.T) {
 	defs := r.GetFunctionDefinitions()
 	require.Len(t, defs, 1)
 	assert.Equal(t, "original", defs[0].Description, "first registration must win")
+}
+
+func TestExecuteToolAuthorizesNativeMCPAndSkillResources(t *testing.T) {
+	for _, scenario := range []struct {
+		name       string
+		tool       types.Tool
+		args       json.RawMessage
+		action     string
+		resourceID string
+	}{
+		{
+			name:       "mcp",
+			tool:       NewMCPTool(&types.MCPService{ID: "service-1", Name: "CRM"}, &types.MCPTool{Name: "lookup", InputSchema: json.RawMessage(`{"type":"object"}`)}, nil, nil, 0),
+			args:       json.RawMessage(`{}`),
+			action:     "mcp",
+			resourceID: "service-1",
+		},
+		{
+			name:       "skill",
+			tool:       &mockTool{name: ToolReadSkill, parameters: json.RawMessage(`{"type":"object"}`)},
+			args:       json.RawMessage(`{"skill_name":"contract-review"}`),
+			action:     "skill",
+			resourceID: "contract-review",
+		},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			var action, resourceID string
+			ctx := types.WithPlatformAgentScope(context.Background(), &types.PlatformAgentScope{
+				Authorize: func(_ context.Context, gotAction, gotResourceID string, _ json.RawMessage) error {
+					action, resourceID = gotAction, gotResourceID
+					return errors.New("stop before execution")
+				},
+			})
+			registry := NewToolRegistry()
+			registry.RegisterTool(scenario.tool)
+			_, err := registry.ExecuteTool(ctx, scenario.tool.Name(), scenario.args)
+			require.Error(t, err)
+			assert.Equal(t, scenario.action, action)
+			assert.Equal(t, scenario.resourceID, resourceID)
+		})
+	}
 }

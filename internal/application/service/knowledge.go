@@ -466,7 +466,21 @@ func defaultChannel(ch string) string {
 }
 
 // GetKnowledgeByID retrieves a knowledge entry by its ID
+func (s *knowledgeService) authorizePlatformKnowledge(ctx context.Context, id string) error {
+	if _, ok := types.PlatformAgentScopeFromContext(ctx); !ok {
+		return types.AuthorizePlatformAgentAction(ctx, "step", "", nil)
+	}
+	knowledge, err := s.repo.GetKnowledgeByID(ctx, types.MustTenantIDFromContext(ctx), id)
+	if err != nil {
+		return err
+	}
+	return types.AuthorizePlatformAgentDocument(ctx, knowledge.KnowledgeBaseID, id)
+}
+
 func (s *knowledgeService) GetKnowledgeByID(ctx context.Context, id string) (*types.Knowledge, error) {
+	if err := s.authorizePlatformKnowledge(ctx, id); err != nil {
+		return nil, err
+	}
 	tenantID := ctx.Value(types.TenantIDContextKey).(uint64)
 
 	knowledge, err := s.repo.GetKnowledgeByID(ctx, tenantID, id)
@@ -492,6 +506,9 @@ func (s *knowledgeService) GetKnowledgeByID(ctx context.Context, id string) (*ty
 
 // GetKnowledgeByIDOnly retrieves knowledge by ID without tenant filter (for permission resolution).
 func (s *knowledgeService) GetKnowledgeByIDOnly(ctx context.Context, id string) (*types.Knowledge, error) {
+	if err := s.authorizePlatformKnowledge(ctx, id); err != nil {
+		return nil, err
+	}
 	return s.repo.GetKnowledgeByIDOnly(ctx, id)
 }
 
@@ -748,6 +765,11 @@ func (s *knowledgeService) UpdateKnowledge(ctx context.Context, knowledge *types
 func (s *knowledgeService) GetKnowledgeBatch(ctx context.Context,
 	tenantID uint64, ids []string,
 ) ([]*types.Knowledge, error) {
+	for _, id := range ids {
+		if err := s.authorizePlatformKnowledge(ctx, id); err != nil {
+			return nil, err
+		}
+	}
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -759,6 +781,11 @@ func (s *knowledgeService) GetKnowledgeBatch(ctx context.Context,
 func (s *knowledgeService) GetKnowledgeBatchWithSharedAccess(ctx context.Context,
 	tenantID uint64, ids []string,
 ) ([]*types.Knowledge, error) {
+	for _, id := range ids {
+		if err := s.authorizePlatformKnowledge(ctx, id); err != nil {
+			return nil, err
+		}
+	}
 	if len(ids) == 0 {
 		return nil, nil
 	}

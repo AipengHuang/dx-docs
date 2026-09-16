@@ -88,6 +88,37 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 	id string,
 	params types.SearchParams,
 ) ([]*types.SearchResult, error) {
+	if err := types.AuthorizePlatformAgentAction(ctx, "step", "", nil); err != nil {
+		return nil, err
+	}
+	if scope, ok := types.PlatformAgentScopeFromContext(ctx); ok {
+		kbIDs := params.KnowledgeBaseIDs
+		if len(kbIDs) == 0 {
+			kbIDs = []string{id}
+		}
+		var results []*types.SearchResult
+		for _, kbID := range kbIDs {
+			ids, err := scope.SearchKnowledgeIDs(kbID, params.KnowledgeIDs)
+			if err != nil {
+				return nil, err
+			}
+			if err := types.AuthorizePlatformAgentAction(ctx, "knowledge", kbID, nil); err != nil {
+				return nil, err
+			}
+			scoped := params
+			scoped.KnowledgeBaseIDs, scoped.KnowledgeIDs = []string{kbID}, ids
+			found, err := s.hybridSearch(ctx, kbID, scoped)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, found...)
+		}
+		return results, nil
+	}
+	return s.hybridSearch(ctx, id, params)
+}
+
+func (s *knowledgeBaseService) hybridSearch(ctx context.Context, id string, params types.SearchParams) ([]*types.SearchResult, error) {
 	// Determine the set of KB IDs to search.
 	searchKBIDs := params.KnowledgeBaseIDs
 	if len(searchKBIDs) == 0 {

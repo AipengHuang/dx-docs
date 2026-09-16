@@ -504,7 +504,7 @@ func Fatalf(c context.Context, format string, args ...interface{}) {
 
 // CloneContext 复制上下文中的关键信息到新上下文
 func CloneContext(ctx context.Context) context.Context {
-	newCtx := context.Background()
+	newCtx := types.CopyPlatformAgentScope(ctx, context.Background())
 
 	for _, k := range []types.ContextKey{
 		types.LoggerContextKey,

@@ -375,8 +375,15 @@ func (h *Handler) startStopWatcher(
 		defer ticker.Stop()
 
 		offset := 0
+		var platformDone <-chan struct{}
+		if scope, ok := types.PlatformAgentScopeFromContext(ctx); ok && scope.RequestContext != nil {
+			platformDone = scope.RequestContext.Done()
+		}
 		for {
 			select {
+			case <-platformDone:
+				eventBus.Emit(watchCtx, event.Event{Type: event.EventStop, SessionID: sessionID, Data: event.StopData{SessionID: sessionID, MessageID: assistantMessageID, Reason: "request_cancelled"}})
+				return
 			case <-watchCtx.Done():
 				return
 			case <-ticker.C:

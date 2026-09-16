@@ -53,3 +53,13 @@ func TestSessionRequiresAdminConsoleRead(t *testing.T) {
 		t.Fatal("personal web session should not require admin")
 	}
 }
+
+func TestSessionBeforeCreatePreservesExplicitID(t *testing.T) {
+	session := &Session{ID: "platform-session"}
+	if err := session.BeforeCreate(nil); err != nil {
+		t.Fatal(err)
+	}
+	if session.ID != "platform-session" {
+		t.Fatalf("session ID = %q, want platform-session", session.ID)
+	}
+}
