@@ -1126,7 +1126,7 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ReasonRequest" }
+              "schema": { "$ref": "#/components/schemas/SessionRevokeRequest" }
             }
           }
         },
@@ -1822,62 +1822,6 @@
           "403": { "$ref": "#/components/responses/Forbidden" },
           "409": { "$ref": "#/components/responses/Conflict" },
           "502": { "$ref": "#/components/responses/BadGateway" }
-        }
-      }
-    },
-    "/agents/{resource_key}/versions/{version_id}/review": {
-      "post": {
-        "operationId": "requestAgentPublicationReview",
-        "summary": "Submit one draft through the unified approval center",
-        "security": [{ "SessionCookie": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/AgentResourceKey" },
-          { "$ref": "#/components/parameters/AgentVersionId" }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentPublicationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": { "description": "Submitted Agent publication approval" },
-          "400": { "$ref": "#/components/responses/InvalidRequest" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" }
-        }
-      }
-    },
-    "/agents/{resource_key}/versions/{version_id}/rollback-request": {
-      "post": {
-        "operationId": "requestAgentVersionRestore",
-        "summary": "Request approval to restore a retired or suspended version",
-        "security": [{ "SessionCookie": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/AgentResourceKey" },
-          { "$ref": "#/components/parameters/AgentVersionId" }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentPublicationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": { "description": "Submitted restore approval" },
-          "400": { "$ref": "#/components/responses/InvalidRequest" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" }
         }
       }
     },
@@ -7461,8 +7405,7 @@
           "username",
           "display_name",
           "email",
-          "password",
-          "reason"
+          "password"
         ],
         "properties": {
           "employee_number": {
@@ -7477,7 +7420,7 @@
             "maxLength": 256
           },
           "email": { "type": "string", "format": "email", "maxLength": 320 },
-          "password": { "type": "string", "minLength": 12, "maxLength": 256 },
+          "password": { "type": "string", "minLength": 6, "maxLength": 256 },
           "reason": { "$ref": "#/components/schemas/AuditReason" }
         }
       },
@@ -7508,7 +7451,7 @@
       "AccountImportRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["accounts", "reason"],
+        "required": ["accounts"],
         "properties": {
           "accounts": {
             "type": "array",
@@ -7547,7 +7490,7 @@
                 },
                 "password": {
                   "type": "string",
-                  "minLength": 12,
+                  "minLength": 6,
                   "maxLength": 256
                 }
               }
@@ -7570,7 +7513,7 @@
       "AccountStatusRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["enabled", "reason"],
+        "required": ["enabled"],
         "properties": {
           "enabled": { "type": "boolean" },
           "reason": { "$ref": "#/components/schemas/AuditReason" }
@@ -7588,9 +7531,9 @@
       "PasswordResetRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["password", "reason"],
+        "required": ["password"],
         "properties": {
-          "password": { "type": "string", "minLength": 12, "maxLength": 256 },
+          "password": { "type": "string", "minLength": 6, "maxLength": 256 },
           "reason": { "$ref": "#/components/schemas/AuditReason" }
         }
       },
@@ -7601,6 +7544,13 @@
         "properties": {
           "reset": { "type": "boolean", "const": true },
           "revoked_sessions": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "SessionRevokeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reason": { "$ref": "#/components/schemas/AuditReason" }
         }
       },
       "SessionRevokeResponse": {
@@ -8081,8 +8031,8 @@
             "items": { "type": "string", "minLength": 1, "maxLength": 200 }
           },
           "workflow": { "$ref": "#/components/schemas/AgentWorkflow" },
-          "max_steps": { "type": "integer", "minimum": 1, "maximum": 100 },
-          "max_seconds": { "type": "integer", "minimum": 10, "maximum": 3600 }
+          "max_steps": { "type": "integer", "minimum": 1, "maximum": 10000 },
+          "max_seconds": { "type": "integer", "minimum": 10, "maximum": 86400 }
         }
       },
       "AgentVersion": {
@@ -8281,16 +8231,6 @@
           }
         ]
       },
-      "AgentPublicationRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["approver_user_id", "due_at", "reason"],
-        "properties": {
-          "approver_user_id": { "$ref": "#/components/schemas/Uuid" },
-          "due_at": { "type": "string", "format": "date-time" },
-          "reason": { "$ref": "#/components/schemas/AuditReason" }
-        }
-      },
       "AgentPublicationGateReport": {
         "type": "object",
         "additionalProperties": false,
@@ -8302,8 +8242,7 @@
             "items": {
               "type": "string",
               "enum": [
-                "approval_missing",
-                "evaluation_missing",
+                "native_configuration_missing",
                 "knowledge_unavailable",
                 "tool_policy_unavailable",
                 "tool_confirmation_unsafe"
