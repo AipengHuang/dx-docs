@@ -17,6 +17,19 @@ type PlatformAgentScope struct {
 	MaxSteps       int
 	KnowledgeBases map[string][]string
 	Authorize      func(context.Context, string, string, json.RawMessage) error
+	ListSkills     func(context.Context) ([]PlatformSkillMetadata, error)
+	ReadSkill      func(context.Context, string, string) (PlatformSkillContent, error)
+	WriteSkill     func(context.Context, string, string) error
+}
+
+type PlatformSkillMetadata struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type PlatformSkillContent struct {
+	Content string   `json:"content"`
+	Files   []string `json:"files"`
 }
 
 func RequirePlatformAgentScope(ctx context.Context) context.Context {

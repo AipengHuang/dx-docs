@@ -147,12 +147,17 @@ func (r *ToolRegistry) ExecuteTool(
 	action, resourceID := "tool", name
 	if mcpTool, ok := tool.(*MCPTool); ok {
 		action, resourceID = "mcp", mcpTool.service.ID
-	} else if name == ToolReadSkill || name == ToolExecuteSkillScript {
+	} else if name == ToolReadSkill || name == ToolExecuteSkillScript || name == ToolCreateSkill {
 		var input struct {
 			SkillName string `json:"skill_name"`
+			Name      string `json:"name"`
 		}
-		if json.Unmarshal(args, &input) == nil && input.SkillName != "" {
-			action, resourceID = "skill", input.SkillName
+		if json.Unmarshal(args, &input) == nil {
+			if name == ToolCreateSkill && input.Name != "" {
+				action, resourceID = "skill-write", input.Name
+			} else if input.SkillName != "" {
+				action, resourceID = "skill", input.SkillName
+			}
 		}
 	}
 	if err := types.AuthorizePlatformAgentAction(ctx, action, resourceID, args); err != nil {
