@@ -36,6 +36,14 @@ type PlatformAgentHandler struct {
 	approvals *approval.Gate
 }
 
+type platformSkillResponse struct {
+	Skills  []types.PlatformSkillMetadata `json:"skills"`
+	Content string                        `json:"content"`
+	Files   []string                      `json:"files"`
+	Created bool                          `json:"created"`
+	Name    string                        `json:"name"`
+}
+
 func NewPlatformAgentHandler(s interfaces.CustomAgentService, models interfaces.ModelService, sessions interfaces.SessionService, chat *session.Handler, mcp interfaces.MCPServiceService, skills interfaces.SkillService, approvals *approval.Gate) *PlatformAgentHandler {
 	return &PlatformAgentHandler{service: s, models: models, sessions: sessions, chat: chat, mcp: mcp, skills: skills, approvals: approvals}
 }
@@ -98,6 +106,59 @@ func (h *PlatformAgentHandler) Execute(c *gin.Context) {
 			return errors.New("execution not authorized")
 		}
 		return nil
+	}
+	requestSkill := func(ctx context.Context, name, filePath, content string) (platformSkillResponse, error) {
+		payload := map[string]interface{}{"user_id": body.UserID, "run_id": body.RunID, "session_id": body.SessionID}
+		if name != "" {
+			payload["name"] = name
+		}
+		if filePath != "" {
+			payload["file_path"] = filePath
+		}
+		if content != "" {
+			payload["content"] = content
+		}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return platformSkillResponse{}, err
+		}
+		r, err := http.NewRequestWithContext(ctx, http.MethodPost, platformURL+"/internal/v1/native-runs/"+body.RunContext+"/skills", bytes.NewReader(data))
+		if err != nil {
+			return platformSkillResponse{}, err
+		}
+		r.Header.Set("Authorization", "Bearer "+token)
+		r.Header.Set("X-Dixian-Service-Identity", "dixian-knowledge")
+		r.Header.Set("X-Request-ID", c.GetHeader("X-Request-ID"))
+		r.Header.Set("X-Log-Number", grant.LogNumber)
+		r.Header.Set("Content-Type", "application/json")
+		response, err := client.Do(r)
+		if err != nil {
+			return platformSkillResponse{}, errors.New("platform skill source unavailable")
+		}
+		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			return platformSkillResponse{}, errors.New("platform skill access denied")
+		}
+		var result platformSkillResponse
+		if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+			return platformSkillResponse{}, errors.New("platform skill response invalid")
+		}
+		return result, nil
+	}
+	scope.ListSkills = func(ctx context.Context) ([]types.PlatformSkillMetadata, error) {
+		result, err := requestSkill(ctx, "", "", "")
+		return result.Skills, err
+	}
+	scope.ReadSkill = func(ctx context.Context, name, filePath string) (types.PlatformSkillContent, error) {
+		result, err := requestSkill(ctx, name, filePath, "")
+		return types.PlatformSkillContent{Content: result.Content, Files: result.Files}, err
+	}
+	scope.WriteSkill = func(ctx context.Context, name, content string) error {
+		result, err := requestSkill(ctx, name, "", content)
+		if err == nil && (!result.Created || result.Name != name) {
+			return errors.New("platform skill write response invalid")
+		}
+		return err
 	}
 	ctx := types.WithPlatformAgentScope(c.Request.Context(), scope)
 	if err := types.AuthorizePlatformAgentAction(ctx, "step", "", nil); err != nil {

@@ -143,6 +143,7 @@ var toolHandlePolicies = map[string]toolHandlePolicy{
 	// durable IDs, but do not mine it for source keys: a skill's JSON may use
 	// "url"/"knowledge_id" with unrelated semantics.
 	"read_skill":           {},
+	"create_skill":         {},
 	"execute_skill_script": {},
 }
 

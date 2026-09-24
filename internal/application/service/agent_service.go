@@ -176,6 +176,9 @@ func (s *agentService) CreateAgentEngine(
 		return nil, fmt.Errorf("failed to register tools: %w", err)
 	}
 	s.registerMCPTools(ctx, toolRegistry, config, eventBus, sessionID, assistantMessageID)
+	if scope, ok := types.PlatformAgentScopeFromContext(ctx); ok && scope.WriteSkill != nil {
+		toolRegistry.RegisterTool(tools.NewCreateSkillTool(scope.WriteSkill))
+	}
 
 	// 3. Resolve knowledge base and selected document metadata
 	kbInfos, selectedDocs := s.resolveKBAndDocInfos(ctx, config)
@@ -383,11 +386,33 @@ func (s *agentService) initializeSkillsManager(
 	}
 	logger.Infof(ctx, "Sandbox configured: mode=%s, timeout=%ds, image=%s", sandboxMode, sandboxTimeout, dockerImage)
 
+	var remote *skills.RemoteSkillSource
+	if scope, ok := types.PlatformAgentScopeFromContext(ctx); ok && scope.ListSkills != nil && scope.ReadSkill != nil {
+		remote = &skills.RemoteSkillSource{
+			List: func(ctx context.Context) ([]*skills.SkillMetadata, error) {
+				items, err := scope.ListSkills(ctx)
+				if err != nil {
+					return nil, err
+				}
+				result := make([]*skills.SkillMetadata, 0, len(items))
+				for _, item := range items {
+					result = append(result, &skills.SkillMetadata{Name: item.Name, Description: item.Description})
+				}
+				return result, nil
+			},
+			Read: func(ctx context.Context, name, path string) (string, []string, error) {
+				item, err := scope.ReadSkill(ctx, name, path)
+				return item.Content, item.Files, err
+			},
+		}
+	}
+
 	// Create skills manager
 	skillsConfig := &skills.ManagerConfig{
 		SkillDirs:     config.SkillDirs,
 		AllowedSkills: config.AllowedSkills,
 		Enabled:       config.SkillsEnabled,
+		Remote:        remote,
 	}
 
 	skillsManager := skills.NewManager(skillsConfig, sandboxMgr)
