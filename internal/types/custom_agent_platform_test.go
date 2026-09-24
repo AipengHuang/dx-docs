@@ -24,3 +24,13 @@ func TestPlatformAgentConfigUsesCompleteNativeContract(t *testing.T) {
 		}
 	}
 }
+
+func TestPlatformAgentConfigDropsUnusedRerankModel(t *testing.T) {
+	config, err := ParsePlatformAgentConfig(json.RawMessage(`{"agent_mode":"smart-reasoning","model_id":"chat-model","rerank_model_id":"missing-reranker","kb_selection_mode":"none"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.RerankModelID != "" {
+		t.Fatalf("unused rerank model was retained: %q", config.RerankModelID)
+	}
+}

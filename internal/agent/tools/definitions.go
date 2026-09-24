@@ -21,6 +21,7 @@ const (
 	// Skills-related tools (only available when skills are enabled)
 	ToolExecuteSkillScript = "execute_skill_script"
 	ToolReadSkill          = "read_skill"
+	ToolCreateSkill        = "create_skill"
 	// Wiki-related tools (only available when wiki KBs are in scope)
 	ToolWikiReadPage      = "wiki_read_page"
 	ToolWikiWritePage     = "wiki_write_page"

@@ -13,6 +13,7 @@ import (
 type Manager struct {
 	loader     *Loader
 	sandboxMgr sandbox.Manager
+	remote     *RemoteSkillSource
 
 	// Configuration
 	skillDirs     []string
@@ -21,7 +22,15 @@ type Manager struct {
 
 	// Cache
 	metadataCache []*SkillMetadata
+	remoteSkills  map[string]bool
 	mu            sync.RWMutex
+}
+
+// RemoteSkillSource keeps platform-owned Skills in their authoritative store
+// while letting the native agent use the same progressive-disclosure flow.
+type RemoteSkillSource struct {
+	List func(context.Context) ([]*SkillMetadata, error)
+	Read func(context.Context, string, string) (string, []string, error)
 }
 
 // ManagerConfig holds configuration for the skill manager
@@ -29,6 +38,7 @@ type ManagerConfig struct {
 	SkillDirs     []string // Directories to search for skills
 	AllowedSkills []string // Skill names whitelist (empty = allow all)
 	Enabled       bool     // Whether skills are enabled
+	Remote        *RemoteSkillSource
 }
 
 // NewManager creates a new skill manager with the given configuration
@@ -42,9 +52,11 @@ func NewManager(config *ManagerConfig, sandboxMgr sandbox.Manager) *Manager {
 	return &Manager{
 		loader:        NewLoader(config.SkillDirs),
 		sandboxMgr:    sandboxMgr,
+		remote:        config.Remote,
 		skillDirs:     config.SkillDirs,
 		allowedSkills: config.AllowedSkills,
 		enabled:       config.Enabled,
+		remoteSkills:  make(map[string]bool),
 	}
 }
 
@@ -63,6 +75,29 @@ func (m *Manager) Initialize(ctx context.Context) error {
 	metadata, err := m.loader.DiscoverSkills()
 	if err != nil {
 		return fmt.Errorf("failed to discover skills: %w", err)
+	}
+	if m.remote != nil && m.remote.List != nil {
+		remote, err := m.remote.List(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to discover platform skills: %w", err)
+		}
+		for _, item := range remote {
+			if item == nil || item.Name == "" {
+				continue
+			}
+			m.remoteSkills[item.Name] = true
+			replaced := false
+			for index, existing := range metadata {
+				if existing.Name == item.Name {
+					metadata[index] = item
+					replaced = true
+					break
+				}
+			}
+			if !replaced {
+				metadata = append(metadata, item)
+			}
+		}
 	}
 
 	// Filter by allowed skills if specified
@@ -123,6 +158,23 @@ func (m *Manager) LoadSkill(ctx context.Context, skillName string) (*Skill, erro
 	if !m.isSkillAllowed(skillName) {
 		return nil, fmt.Errorf("skill not allowed: %s", skillName)
 	}
+	if m.remoteSkills[skillName] {
+		if m.remote == nil || m.remote.Read == nil {
+			return nil, fmt.Errorf("platform skill source is unavailable")
+		}
+		content, _, err := m.remote.Read(ctx, skillName, SkillFileName)
+		if err != nil {
+			return nil, err
+		}
+		skill, err := ParseSkillFile(content)
+		if err != nil {
+			return nil, err
+		}
+		if skill.Name != skillName {
+			return nil, fmt.Errorf("platform skill name does not match: %s", skillName)
+		}
+		return skill, nil
+	}
 
 	return m.loader.LoadSkillInstructions(skillName)
 }
@@ -149,6 +201,13 @@ func (m *Manager) ReadSkillFile(ctx context.Context, skillName, filePath string)
 	if !m.isSkillAllowed(skillName) {
 		return "", fmt.Errorf("skill not allowed: %s", skillName)
 	}
+	if m.remoteSkills[skillName] {
+		if m.remote == nil || m.remote.Read == nil {
+			return "", fmt.Errorf("platform skill source is unavailable")
+		}
+		content, _, err := m.remote.Read(ctx, skillName, filePath)
+		return content, err
+	}
 
 	file, err := m.loader.LoadSkillFile(skillName, filePath)
 	if err != nil {
@@ -166,6 +225,13 @@ func (m *Manager) ListSkillFiles(ctx context.Context, skillName string) ([]strin
 
 	if !m.isSkillAllowed(skillName) {
 		return nil, fmt.Errorf("skill not allowed: %s", skillName)
+	}
+	if m.remoteSkills[skillName] {
+		if m.remote == nil || m.remote.Read == nil {
+			return nil, fmt.Errorf("platform skill source is unavailable")
+		}
+		_, files, err := m.remote.Read(ctx, skillName, SkillFileName)
+		return files, err
 	}
 
 	return m.loader.ListSkillFiles(skillName)

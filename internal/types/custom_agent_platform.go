@@ -50,6 +50,9 @@ func ParsePlatformAgentConfig(data json.RawMessage) (CustomAgentConfig, error) {
 	}
 	agent := CustomAgent{Config: config}
 	agent.EnsureDefaults()
+	if agent.Config.KBSelectionMode == "none" {
+		agent.Config.RerankModelID = ""
+	}
 	return agent.Config, nil
 }
 
