@@ -191,17 +191,9 @@ func (s *sessionService) AgentQA(
 	// Events will be emitted to EventBus and handled by the Handler layer
 	logger.Info(ctx, "Executing agent with streaming")
 	if _, err := engine.Execute(ctx, sessionID, req.AssistantMessageID, agentQuery, llmContext, agentImageURLs); err != nil {
+		// The engine already emitted the error event ahead of its completion
+		// event; emitting here again would append a duplicate after "complete".
 		logger.Errorf(ctx, "Agent execution failed: %v", err)
-		// Emit error event to the EventBus used by this agent
-		eventBus.Emit(ctx, event.Event{
-			Type:      event.EventError,
-			SessionID: sessionID,
-			Data: event.ErrorData{
-				Error:     err.Error(),
-				Stage:     "agent_execution",
-				SessionID: sessionID,
-			},
-		})
 	}
 	// Return empty - events will be handled by Handler via EventBus subscription
 	return nil

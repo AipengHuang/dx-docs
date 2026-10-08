@@ -555,6 +555,39 @@ func TestExecuteLoop_EndTurnTerminates(t *testing.T) {
 	assert.Equal(t, 1, mock.callCount, "end_turn must end the loop after the first model call")
 }
 
+// ---------------------------------------------------------------------------
+// Error path: EventError must reach the stream BEFORE the deferred
+// EventAgentComplete. The portal runtime breaks its SSE read loop on
+// "complete", so an error emitted afterwards is never consumed and the run
+// is reported as a silent zero-output success.
+// ---------------------------------------------------------------------------
+
+func TestExecuteLoop_ErrorEventPrecedesCompletionEvent(t *testing.T) {
+	// Empty responses → ChatStream fails immediately with a non-transient error.
+	mock := &mockChat{}
+
+	engine := newTestEngine(t, mock)
+	var emitOrder []event.EventType
+	engine.eventBus.On(event.EventError, func(_ context.Context, _ event.Event) error {
+		emitOrder = append(emitOrder, event.EventError)
+		return nil
+	})
+	engine.eventBus.On(event.EventAgentComplete, func(_ context.Context, _ event.Event) error {
+		emitOrder = append(emitOrder, event.EventAgentComplete)
+		return nil
+	})
+
+	state := &types.AgentState{}
+	_, err := engine.executeLoop(context.Background(), state, "test query", emptyMessages(), emptyTools(), "sess-1", "msg-1")
+
+	require.Error(t, err)
+	require.NotEmpty(t, emitOrder, "execution failure must emit stream events")
+	require.Equal(t, event.EventError, emitOrder[0],
+		"EventError must be emitted before the deferred EventAgentComplete so stream consumers see the failure")
+	require.Contains(t, emitOrder, event.EventAgentComplete,
+		"completion event is still required for assistant message persistence")
+}
+
 func TestStreamFinalAnswerToEventBus_EmitsDoneWhenProviderEndsWithEmptyChunk(t *testing.T) {
 	mock := &mockChat{
 		responses: []mockResponse{

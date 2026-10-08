@@ -276,16 +276,9 @@ func (e *AgentEngine) Execute(
 	_, err := e.executeLoop(ctx, state, query, messages, tools, sessionID, messageID)
 	if err != nil {
 		logger.Errorf(ctx, "[Agent] Execution failed: %v", err)
-		e.eventBus.Emit(ctx, event.Event{
-			ID:        generateEventID("error"),
-			Type:      event.EventError,
-			SessionID: sessionID,
-			Data: event.ErrorData{
-				Error:     err.Error(),
-				Stage:     "agent_execution",
-				SessionID: sessionID,
-			},
-		})
+		// The error event is emitted inside executeLoop before its deferred
+		// completion event; re-emitting here would place it after "complete",
+		// where stream consumers that break on "complete" never read it.
 		finishAgentSpan(agentSpan, state, err)
 		return nil, err
 	}
@@ -404,6 +397,20 @@ loop:
 		outcome, iterErr := e.runReActIteration(ctx, state, &messages, tools,
 			sessionID, messageID, query, &emptyRetries, &consecutiveSameContent, &lastResponseContent)
 		if iterErr != nil {
+			// Emit before the deferred completion event: stream consumers
+			// (e.g. the portal runtime) break their read loop on "complete",
+			// so an error emitted after it is never seen and the run looks
+			// like a silent zero-output success.
+			e.eventBus.Emit(context.WithoutCancel(ctx), event.Event{
+				ID:        generateEventID("error"),
+				Type:      event.EventError,
+				SessionID: sessionID,
+				Data: event.ErrorData{
+					Error:     iterErr.Error(),
+					Stage:     "agent_execution",
+					SessionID: sessionID,
+				},
+			})
 			return state, iterErr
 		}
 		switch outcome {
