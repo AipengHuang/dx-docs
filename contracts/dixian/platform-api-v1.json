@@ -1698,7 +1698,7 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/AgentVersionConfig" }
+              "schema": { "$ref": "#/components/schemas/AgentDraftUpdate" }
             }
           }
         },
@@ -1715,6 +1715,49 @@
           "401": { "$ref": "#/components/responses/Unauthenticated" },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/agents/{resource_key}/versions/{version_id}/reopen": {
+      "post": {
+        "operationId": "reopenAgentDraft",
+        "summary": "Return an abandoned review to draft without bypassing an active approval",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AgentResourceKey"
+          },
+          {
+            "$ref": "#/components/parameters/AgentVersionId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reopened draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentVersion"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/HiddenNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
@@ -7956,7 +7999,7 @@
       },
       "AgentWorkflow": {
         "type": "string",
-        "enum": ["fast", "search", "team"]
+        "enum": ["native", "fast", "search", "team"]
       },
       "AgentVersionStatus": {
         "type": "string",
@@ -8033,6 +8076,96 @@
           "workflow": { "$ref": "#/components/schemas/AgentWorkflow" },
           "max_steps": { "type": "integer", "minimum": 1, "maximum": 10000 },
           "max_seconds": { "type": "integer", "minimum": 10, "maximum": 86400 }
+        }
+      },
+      "AgentDraftUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "prompt",
+          "knowledge_resource_ids",
+          "skill_refs",
+          "mcp_tool_refs",
+          "input_schema",
+          "output_schema",
+          "required_permission_codes",
+          "workflow",
+          "max_steps",
+          "max_seconds"
+        ],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "knowledge_resource_ids": {
+            "type": "array",
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "skill_refs": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/AgentSkillReference"
+            }
+          },
+          "mcp_tool_refs": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/AgentMcpToolReference"
+            }
+          },
+          "input_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "output_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "required_permission_codes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "contains": {
+              "const": "agent:chat"
+            },
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/AgentWorkflow"
+          },
+          "max_steps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "max_seconds": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 86400
+          },
+          "native_config": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "expected_config_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
         }
       },
       "AgentVersion": {
