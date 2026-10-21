@@ -2,7 +2,7 @@
 
 package dixiancontract
 
-const ContractSHA256 = "3765d51fce58a4d4d84b3d75af6cf1996cb45dc9a4308a83543e0a340f976f82"
+const ContractSHA256 = "b0e344b2e0219dbb9aa2dd6877531d21a2f59315a16c0e718d8e7b3c0200c086"
 
 var RequestContextFields = []string{
 	"request_id",

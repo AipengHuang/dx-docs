@@ -7387,6 +7387,7 @@
             "type": "string",
             "enum": [
               "chat",
+              "agent_library",
               "projects",
               "scheduled_tasks",
               "knowledge_bases",
