@@ -59,6 +59,15 @@ func AuthorizePlatformAgentAction(ctx context.Context, action, resourceID string
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	// HybridSearch authorizes a KB with action "knowledge"; engine-owned
+	// attachment KBs exist only in per-run scopes, never in a platform grant.
+	if action == "knowledge" {
+		if scope, ok := PlatformAgentScopeFromContext(ctx); ok {
+			if _, owned := scope.OwnedKnowledgeBases[resourceID]; owned {
+				return nil
+			}
+		}
+	}
 	if ctx.Value(platformAgentRequiredKey{}) != true {
 		return nil
 	}

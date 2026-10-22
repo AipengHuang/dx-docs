@@ -1548,7 +1548,7 @@ func startTemporaryDocumentCleanup(svc interfaces.TemporaryDocumentService, clea
 
 // startNativeAttachmentCleanup purges expired oversized-run attachment
 // documents from the engine-owned ephemeral knowledge base.
-func startNativeAttachmentCleanup(svc *service.NativeAttachmentIngestService, cleaner interfaces.ResourceCleaner) {
+func startNativeAttachmentCleanup(svc *service.NativeAttachmentIngestService, tenants interfaces.TenantService, cleaner interfaces.ResourceCleaner) {
 	stop := make(chan struct{})
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
@@ -1556,7 +1556,15 @@ func startNativeAttachmentCleanup(svc *service.NativeAttachmentIngestService, cl
 		for {
 			select {
 			case <-ticker.C:
-				svc.CleanupExpired(context.Background(), types.DefaultBuiltinModelTenantID)
+				// Sweep every tenant: runs ingest under the caller's effective
+				// agent tenant, so temporary documents can exist outside the
+				// builtin tenant. CleanupExpired is a lookup-only sweep and
+				// never provisions KBs for tenants that have nothing to purge.
+				if tenantList, err := tenants.ListAllTenants(context.Background()); err == nil {
+					for _, tenant := range tenantList {
+						svc.CleanupExpired(context.Background(), tenant.ID)
+					}
+				}
 			case <-stop:
 				return
 			}

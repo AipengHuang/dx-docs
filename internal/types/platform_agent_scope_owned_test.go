@@ -39,6 +39,26 @@ func TestOwnedKnowledgeBasesEnforceDocWhitelistWithoutPlatformAuthority(t *testi
 	}
 }
 
+func TestOwnedKnowledgeActionBypassesPlatformAuthorityForHybridSearch(t *testing.T) {
+	platformDenied := errors.New("platform denied")
+	scope := &PlatformAgentScope{
+		OwnedKnowledgeBases: map[string][]string{"kb-temp": {"doc-1"}},
+		Authorize: func(context.Context, string, string, json.RawMessage) error {
+			return platformDenied
+		},
+	}
+	scopedCtx := WithPlatformAgentScope(context.Background(), scope)
+	if err := AuthorizePlatformAgentAction(scopedCtx, "knowledge", "kb-temp", nil); err != nil {
+		t.Fatalf("owned KB hybrid search required platform authority: %v", err)
+	}
+	if err := AuthorizePlatformAgentAction(scopedCtx, "knowledge", "kb-other", nil); !errors.Is(err, platformDenied) {
+		t.Fatalf("non-owned KB bypassed the authorize callback: %v", err)
+	}
+	if err := AuthorizePlatformAgentAction(scopedCtx, "step", "kb-temp", nil); !errors.Is(err, platformDenied) {
+		t.Fatalf("non-knowledge actions must still call the platform: %v", err)
+	}
+}
+
 func TestSearchKnowledgeIDsStillRejectsUnknownKnowledgeBases(t *testing.T) {
 	scope := &PlatformAgentScope{
 		KnowledgeBases:      map[string][]string{"kb-platform": nil},

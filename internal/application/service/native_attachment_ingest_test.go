@@ -31,19 +31,26 @@ func (s *ingestKBStub) CreateKnowledgeBase(_ context.Context, kb *types.Knowledg
 
 type ingestKnowledgeStub struct {
 	interfaces.KnowledgeService
-	passages [][]string
-	updated  []*types.Knowledge
-	deleted  []string
-	listed   []*types.Knowledge
+	passages     [][]string
+	updated      []*types.Knowledge
+	deleted      []string
+	listed       []*types.Knowledge
+	failIndexing bool
+	lastCtx      context.Context
 }
 
-func (s *ingestKnowledgeStub) CreateKnowledgeFromPassageSync(_ context.Context, kbID string, passage []string, _ string) (*types.Knowledge, error) {
+func (s *ingestKnowledgeStub) CreateKnowledgeFromPassageSync(ctx context.Context, kbID string, passage []string, _ string) (*types.Knowledge, error) {
 	s.passages = append(s.passages, passage)
+	s.lastCtx = ctx
+	status := "enabled"
+	if s.failIndexing {
+		status = "disabled"
+	}
 	return &types.Knowledge{
 		ID:              fmt.Sprintf("k-%d", len(s.passages)),
 		KnowledgeBaseID: kbID,
 		ParseStatus:     types.ParseStatusCompleted,
-		EnableStatus:    "enabled",
+		EnableStatus:    status,
 	}, nil
 }
 
@@ -158,6 +165,40 @@ func TestNativeAttachmentIngestChunksWholeDocumentAndTagsMetadata(t *testing.T) 
 	}
 }
 
+func TestCleanupDoesNotProvisionKnowledgeBases(t *testing.T) {
+	kb, ks := &ingestKBStub{}, &ingestKnowledgeStub{}
+	svc := newIngestService(kb, ks, 24*time.Hour)
+
+	svc.CleanupExpired(context.Background(), 10000)
+	if kb.created != 0 {
+		t.Fatalf("sweep created %d knowledge bases", kb.created)
+	}
+}
+
+func TestIngestRejectsUnindexedKnowledge(t *testing.T) {
+	kb, ks := &ingestKBStub{}, &ingestKnowledgeStub{}
+	ks.failIndexing = true
+	svc := newIngestService(kb, ks, 24*time.Hour)
+	kbID, _ := svc.EphemeralKB(context.Background(), 10000)
+
+	if _, err := svc.Ingest(context.Background(), 10000, kbID, strings.Repeat("行数据\n", 700), "a.csv", "conv"); err == nil {
+		t.Fatal("unindexed knowledge must surface an error so the inline fallback runs")
+	}
+}
+
+func TestIngestContextCarriesTenantInfo(t *testing.T) {
+	kb, ks := &ingestKBStub{}, &ingestKnowledgeStub{}
+	svc := newIngestService(kb, ks, 24*time.Hour)
+	kbID, _ := svc.EphemeralKB(context.Background(), 10000)
+
+	if _, err := svc.Ingest(context.Background(), 10000, kbID, strings.Repeat("行数据\n", 700), "a.csv", "conv-9"); err != nil {
+		t.Fatalf("ingest failed: %v", err)
+	}
+	if ks.lastCtx.Value(types.TenantInfoContextKey) == nil || ks.lastCtx.Value(types.TenantIDContextKey) != uint64(10000) {
+		t.Fatal("ingest context must carry both tenant keys for the deletion path")
+	}
+}
+
 func TestSameNamedTenantKBIsNotReused(t *testing.T) {
 	kb, ks := &ingestKBStub{}, &ingestKnowledgeStub{}
 	kb.kbs = []*types.KnowledgeBase{{ID: "kb-user", Name: nativeAttachmentKBName, TenantID: 10000, Description: "user-made"}}
@@ -181,16 +222,17 @@ func TestNativeAttachmentCleanupDeletesOnlyExpiredDocuments(t *testing.T) {
 	kbID, _ := svc.EphemeralKB(context.Background(), 10000)
 
 	now := time.Now()
-	tempMeta, _ := json.Marshal(map[string]string{"kind": "native_temp_attachment"})
 	ks.listed = []*types.Knowledge{
-		{ID: "k-old", KnowledgeBaseID: kbID, CreatedAt: now.Add(-25 * time.Hour), CustomMetadata: types.JSON(tempMeta)},
-		{ID: "k-new", KnowledgeBaseID: kbID, CreatedAt: now.Add(-time.Hour), CustomMetadata: types.JSON(tempMeta)},
-		{ID: "k-foreign", KnowledgeBaseID: "kb-other", CreatedAt: now.Add(-48 * time.Hour), CustomMetadata: types.JSON(tempMeta)},
+		{ID: "k-old", KnowledgeBaseID: kbID, CreatedAt: now.Add(-25 * time.Hour)},
+		{ID: "k-new", KnowledgeBaseID: kbID, CreatedAt: now.Add(-time.Hour)},
+		{ID: "k-foreign", KnowledgeBaseID: "kb-other", CreatedAt: now.Add(-48 * time.Hour)},
+		// Crash between creation and the metadata update leaves rows without
+		// the kind marker; they must still be reclaimed by age.
 		{ID: "k-manual", KnowledgeBaseID: kbID, CreatedAt: now.Add(-48 * time.Hour)},
 	}
 
 	svc.CleanupExpired(context.Background(), 10000)
-	if len(ks.deleted) != 1 || ks.deleted[0] != "k-old" {
+	if len(ks.deleted) != 2 || ks.deleted[0] != "k-old" || ks.deleted[1] != "k-manual" {
 		t.Fatalf("cleanup deleted: %v", ks.deleted)
 	}
 }

@@ -75,10 +75,23 @@ func nativeAttachmentTTLFromEnv() time.Duration {
 }
 
 func withNativeAttachmentTenant(ctx context.Context, tenantID uint64) context.Context {
-	return context.WithValue(ctx, types.TenantIDContextKey, tenantID)
+	ctx = context.WithValue(ctx, types.TenantIDContextKey, tenantID)
+	// DeleteKnowledge asserts TenantInfoContextKey; keep the deletion path
+	// (including the TTL sweeper) from panicking when callers omit it.
+	if ctx.Value(types.TenantInfoContextKey) == nil {
+		ctx = context.WithValue(ctx, types.TenantInfoContextKey, &types.Tenant{ID: tenantID})
+	}
+	return ctx
 }
 
 func (s *NativeAttachmentIngestService) EphemeralKB(ctx context.Context, tenantID uint64) (string, error) {
+	return s.ephemeralKB(ctx, tenantID, true)
+}
+
+// ephemeralKB finds the engine-owned attachment KB; ensure=true creates it on
+// first use, ensure=false is a lookup used by the TTL sweeper so it never
+// provisions KBs for tenants that never ingested anything.
+func (s *NativeAttachmentIngestService) ephemeralKB(ctx context.Context, tenantID uint64, ensure bool) (string, error) {
 	ctx = withNativeAttachmentTenant(ctx, tenantID)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -94,6 +107,9 @@ func (s *NativeAttachmentIngestService) EphemeralKB(ctx context.Context, tenantI
 			s.kbCache[tenantID] = kb.ID
 			return kb.ID, nil
 		}
+	}
+	if !ensure {
+		return "", nil
 	}
 	embeddingModelID, err := s.defaultEmbeddingModelID(ctx)
 	if err != nil {
@@ -148,6 +164,11 @@ func (s *NativeAttachmentIngestService) Ingest(
 	if err != nil {
 		return types.NativeAttachmentIngestResult{}, err
 	}
+	// The sync path reports processing failures through the row state, not
+	// its error: never promise retrieval unless chunks are actually enabled.
+	if knowledge == nil || knowledge.ID == "" || knowledge.EnableStatus != "enabled" {
+		return types.NativeAttachmentIngestResult{}, fmt.Errorf("attachment %s was not indexed (status=%s)", fileName, knowledgeStatus(knowledge))
+	}
 
 	knowledge.Title = fileName
 	meta, err := json.Marshal(map[string]string{
@@ -167,18 +188,17 @@ func (s *NativeAttachmentIngestService) Ingest(
 	return types.NativeAttachmentIngestResult{KnowledgeID: knowledge.ID, ChunkCount: len(passages)}, nil
 }
 
-func isNativeTempAttachment(doc *types.Knowledge) bool {
-	var meta map[string]string
-	if err := json.Unmarshal(doc.CustomMetadata, &meta); err != nil {
-		return false
+func knowledgeStatus(k *types.Knowledge) string {
+	if k == nil {
+		return "nil"
 	}
-	return meta["kind"] == "native_temp_attachment"
+	return fmt.Sprintf("parse=%s enable=%s", k.ParseStatus, k.EnableStatus)
 }
 
 func (s *NativeAttachmentIngestService) CleanupExpired(ctx context.Context, tenantID uint64) {
 	ctx = withNativeAttachmentTenant(ctx, tenantID)
-	kbID, err := s.EphemeralKB(ctx, tenantID)
-	if err != nil {
+	kbID, err := s.ephemeralKB(ctx, tenantID, false)
+	if err != nil || kbID == "" {
 		return
 	}
 	docs, err := s.knowledgeService.ListKnowledgeByKnowledgeBaseID(ctx, kbID)
@@ -186,9 +206,11 @@ func (s *NativeAttachmentIngestService) CleanupExpired(ctx context.Context, tena
 		logger.Warnf(ctx, "native attachment cleanup list failed: %v", err)
 		return
 	}
+	// The KB is engine-owned (marker-checked at lookup/creation), so every
+	// expired document in it is a temporary attachment; delete by age alone.
 	cutoff := time.Now().Add(-s.ttl)
 	for _, doc := range docs {
-		if !doc.CreatedAt.Before(cutoff) || !isNativeTempAttachment(doc) {
+		if !doc.CreatedAt.Before(cutoff) {
 			continue
 		}
 		if err := s.knowledgeService.DeleteKnowledge(ctx, doc.ID); err != nil {
