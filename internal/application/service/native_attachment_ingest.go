@@ -88,6 +88,10 @@ func (s *NativeAttachmentIngestService) EphemeralKB(ctx context.Context, tenantI
 	return s.ephemeralKB(ctx, tenantID, true)
 }
 
+func (s *NativeAttachmentIngestService) FindEphemeralKB(ctx context.Context, tenantID uint64) (string, error) {
+	return s.ephemeralKB(ctx, tenantID, false)
+}
+
 // ephemeralKB finds the engine-owned attachment KB; ensure=true creates it on
 // first use, ensure=false is a lookup used by the TTL sweeper so it never
 // provisions KBs for tenants that never ingested anything.

@@ -23,6 +23,10 @@ func (s *stubNativeIngestor) EphemeralKB(context.Context, uint64) (string, error
 	return s.kbID, nil
 }
 
+func (s *stubNativeIngestor) FindEphemeralKB(context.Context, uint64) (string, error) {
+	return s.kbID, nil
+}
+
 func (s *stubNativeIngestor) Ingest(_ context.Context, _ uint64, _ string, content, fileName, conversationID string) (types.NativeAttachmentIngestResult, error) {
 	s.calls = append(s.calls, fileName+"|"+conversationID+"|"+content)
 	if s.ingestErr != nil {
