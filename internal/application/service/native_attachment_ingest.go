@@ -195,6 +195,11 @@ func knowledgeStatus(k *types.Knowledge) string {
 	return fmt.Sprintf("parse=%s enable=%s", k.ParseStatus, k.EnableStatus)
 }
 
+func (s *NativeAttachmentIngestService) ListTemporaryDocuments(ctx context.Context, tenantID uint64, kbID string) ([]*types.Knowledge, error) {
+	ctx = withNativeAttachmentTenant(ctx, tenantID)
+	return s.knowledgeService.ListKnowledgeByKnowledgeBaseID(ctx, kbID)
+}
+
 func (s *NativeAttachmentIngestService) CleanupExpired(ctx context.Context, tenantID uint64) {
 	ctx = withNativeAttachmentTenant(ctx, tenantID)
 	kbID, err := s.ephemeralKB(ctx, tenantID, false)
