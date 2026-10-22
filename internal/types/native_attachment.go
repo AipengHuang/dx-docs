@@ -13,5 +13,6 @@ type NativeAttachmentIngestResult struct {
 type NativeAttachmentIngestor interface {
 	EphemeralKB(ctx context.Context, tenantID uint64) (string, error)
 	Ingest(ctx context.Context, tenantID uint64, kbID string, content, fileName, conversationID string) (NativeAttachmentIngestResult, error)
+	ListTemporaryDocuments(ctx context.Context, tenantID uint64, kbID string) ([]*Knowledge, error)
 	CleanupExpired(ctx context.Context, tenantID uint64)
 }

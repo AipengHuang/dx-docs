@@ -88,6 +88,9 @@ type MessageAttachment struct {
 	IsTruncated    bool   `json:"is_truncated,omitempty"`    // Whether content was truncated
 	LineCount      int    `json:"line_count,omitempty"`      // Total line count (for text files)
 	ContentMode    string `json:"content_mode,omitempty"`    // full or selected_chunks
+	// IndexedKnowledgeID links an indexed_document stub to the engine-owned
+	// temporary knowledge row so later turns in the same session can re-scope it.
+	IndexedKnowledgeID string `json:"indexed_knowledge_id,omitempty"`
 	TokenCount     int    `json:"token_count,omitempty"`     // Approximate tokens in the parsed document
 	SelectedChunks int    `json:"selected_chunks,omitempty"` // Chunks included in this message prompt
 	TotalChunks    int    `json:"total_chunks,omitempty"`    // Total parsed chunks

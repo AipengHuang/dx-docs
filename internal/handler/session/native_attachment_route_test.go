@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Tencent/WeKnora/internal/types"
+	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
 type stubNativeIngestor struct {
@@ -15,6 +16,7 @@ type stubNativeIngestor struct {
 	ingestErr  error
 	calls      []string
 	chunkCount int
+	aliveDocs  []string
 }
 
 func (s *stubNativeIngestor) EphemeralKB(context.Context, uint64) (string, error) {
@@ -30,6 +32,52 @@ func (s *stubNativeIngestor) Ingest(_ context.Context, _ uint64, _ string, conte
 }
 
 func (stubNativeIngestor) CleanupExpired(context.Context, uint64) {}
+
+func (s *stubNativeIngestor) ListTemporaryDocuments(_ context.Context, _ uint64, _ string) ([]*types.Knowledge, error) {
+	docs := make([]*types.Knowledge, 0, len(s.aliveDocs))
+	for _, id := range s.aliveDocs {
+		docs = append(docs, &types.Knowledge{ID: id})
+	}
+	return docs, nil
+}
+
+type stubMessageService struct {
+	interfaces.MessageService
+	messages []*types.Message
+}
+
+func (s *stubMessageService) GetRecentMessagesBySession(_ context.Context, _ string, _ int) ([]*types.Message, error) {
+	return s.messages, nil
+}
+
+// 追问轮(无新超长附件)必须继承同会话历史里的临时文档检索范围。
+func TestFollowUpTurnInheritsSessionTemporaryDocuments(t *testing.T) {
+	rc := oversizedRequestContext()
+	rc.attachments = nil // 追问轮不带附件
+	scope := &types.PlatformAgentScope{KnowledgeBases: map[string][]string{"kb-1": nil}}
+	ingestor := &stubNativeIngestor{kbID: "kb-temp", aliveDocs: []string{"k-old-1", "k-old-2"}}
+	messages := &stubMessageService{messages: []*types.Message{
+		{Attachments: types.MessageAttachments{
+			{FileName: "a.xlsx", ContentMode: "indexed_document", IndexedKnowledgeID: "k-old-1"},
+			{FileName: "b.csv", ContentMode: "indexed_document", IndexedKnowledgeID: "k-old-2"},
+			{FileName: "dead.docx", ContentMode: "indexed_document", IndexedKnowledgeID: "k-deleted"},
+		}},
+	}}
+	h := &Handler{nativeAttachments: ingestor, messageService: messages}
+
+	h.routeOversizedAttachments(context.Background(), rc, scope, 10000, "conv-1")
+
+	owned := scope.OwnedKnowledgeBases["kb-temp"]
+	if len(owned) != 2 || owned[0] != "k-old-1" || owned[1] != "k-old-2" {
+		t.Fatalf("session documents not re-scoped (dead docs must drop): %v", owned)
+	}
+	if !containsIDs(rc.knowledgeIDs, "k-old-1") || containsIDs(rc.knowledgeIDs, "k-deleted") {
+		t.Fatalf("knowledge ids wrong: %v", rc.knowledgeIDs)
+	}
+	if !containsIDs(rc.knowledgeBaseIDs, "kb-temp") {
+		t.Fatalf("kb not appended: %v", rc.knowledgeBaseIDs)
+	}
+}
 
 func oversizedRequestContext() *qaRequestContext {
 	return &qaRequestContext{

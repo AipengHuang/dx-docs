@@ -40,14 +40,15 @@ func (h *Handler) routeOversizedAttachments(
 			continue
 		}
 		stub := types.MessageAttachment{
-			URL:         attachment.URL,
-			FileName:    attachment.FileName,
-			FileType:    attachment.FileType,
-			FileSize:    attachment.FileSize,
-			Content:     nativeAttachmentIndexedStub(attachment.FileName, attachment.LineCount, result.KnowledgeID),
-			LineCount:   attachment.LineCount,
-			ContentMode: "indexed_document",
-			TotalChunks: result.ChunkCount,
+			URL:                attachment.URL,
+			FileName:           attachment.FileName,
+			FileType:           attachment.FileType,
+			FileSize:           attachment.FileSize,
+			Content:            nativeAttachmentIndexedStub(attachment.FileName, attachment.LineCount, result.KnowledgeID),
+			LineCount:          attachment.LineCount,
+			ContentMode:        "indexed_document",
+			TotalChunks:        result.ChunkCount,
+			IndexedKnowledgeID: result.KnowledgeID,
 		}
 		rc.attachments[i] = stub
 		owned = append(owned, result.KnowledgeID)
@@ -55,14 +56,84 @@ func (h *Handler) routeOversizedAttachments(
 		logger.Infof(ctx, "oversized attachment ingested for retrieval: file=%s lines=%d chunks=%d knowledge=%s",
 			attachment.FileName, attachment.LineCount, result.ChunkCount, result.KnowledgeID)
 	}
-	if len(owned) == 0 {
+	// Follow-up turns in the same conversation must keep retrieval access to
+	// documents ingested by earlier turns (within their TTL), or the model is
+	// forced to ask the user to re-upload the file for every question.
+	h.reattachSessionTemporaryDocuments(ctx, rc, scope, tenantID, conversationID, kbID, owned)
+}
+
+func (h *Handler) reattachSessionTemporaryDocuments(
+	ctx context.Context,
+	rc *qaRequestContext,
+	scope *types.PlatformAgentScope,
+	tenantID uint64,
+	sessionID, kbID string,
+	ingested []string,
+) {
+	var messages []*types.Message
+	if h.messageService != nil {
+		var err error
+		messages, err = h.messageService.GetRecentMessagesBySession(ctx, sessionID, 100)
+		if err != nil {
+			logger.Warnf(ctx, "native attachment history lookup failed: %v", err)
+		}
+	}
+	seen := make(map[string]bool, len(ingested))
+	for _, id := range ingested {
+		seen[id] = true
+	}
+	for _, message := range messages {
+		for _, attachment := range message.Attachments {
+			if attachment.IndexedKnowledgeID != "" && !seen[attachment.IndexedKnowledgeID] {
+				seen[attachment.IndexedKnowledgeID] = true
+				ingested = append(ingested, attachment.IndexedKnowledgeID)
+			}
+		}
+	}
+	if len(ingested) == 0 {
 		return
 	}
-	rc.knowledgeBaseIDs = append(rc.knowledgeBaseIDs, kbID)
+	// Drop ids already reclaimed by the TTL sweeper so the prompt never pins
+	// dead documents.
+	if docs, err := h.nativeAttachments.ListTemporaryDocuments(ctx, tenantID, kbID); err == nil {
+		alive := make(map[string]bool, len(docs))
+		for _, doc := range docs {
+			alive[doc.ID] = true
+		}
+		filtered := ingested[:0]
+		for _, id := range ingested {
+			if alive[id] {
+				filtered = append(filtered, id)
+			}
+		}
+		ingested = filtered
+	}
+	if len(ingested) == 0 {
+		return
+	}
 	if scope.OwnedKnowledgeBases == nil {
 		scope.OwnedKnowledgeBases = make(map[string][]string)
 	}
-	scope.OwnedKnowledgeBases[kbID] = owned
+	existing := scope.OwnedKnowledgeBases[kbID]
+	known := make(map[string]bool, len(existing)+len(ingested))
+	for _, id := range existing {
+		known[id] = true
+	}
+	merged := existing
+	for _, id := range ingested {
+		if !known[id] {
+			known[id] = true
+			merged = append(merged, id)
+		}
+	}
+	scope.OwnedKnowledgeBases[kbID] = merged
+	for _, id := range ingested {
+		rc.knowledgeIDs = append(rc.knowledgeIDs, id)
+	}
+	if len(scope.OwnedKnowledgeBases[kbID]) > 0 {
+		rc.knowledgeBaseIDs = append(rc.knowledgeBaseIDs, kbID)
+	}
+	logger.Infof(ctx, "session temporary documents re-scoped: session=%s count=%d", sessionID, len(scope.OwnedKnowledgeBases[kbID]))
 }
 
 func nativeAttachmentIndexedStub(fileName string, lineCount int, knowledgeID string) string {
