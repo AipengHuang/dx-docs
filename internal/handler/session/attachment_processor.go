@@ -153,6 +153,7 @@ func (p *AttachmentProcessor) processTextFile(ctx context.Context, data []byte, 
 
 	if lineCount > maxTextFileLines {
 		attachment.IsTruncated = true
+		attachment.FullContent = string(data)
 		logger.Infof(ctx, "text file truncated: total=%d, kept=%d", lineCount, maxTextFileLines)
 	}
 
@@ -279,6 +280,7 @@ func (p *AttachmentProcessor) applyLineTruncation(ctx context.Context, content s
 	if lineCount > maxTextFileLines {
 		attachment.Content = strings.Join(lines[:maxTextFileLines], "\n")
 		attachment.IsTruncated = true
+		attachment.FullContent = content
 		logger.Infof(ctx, "content truncated: total=%d, kept=%d", lineCount, maxTextFileLines)
 	} else {
 		attachment.Content = content

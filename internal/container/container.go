@@ -268,6 +268,8 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	}
 	must(container.Provide(service.NewTemporaryDocumentService))
 	must(container.Invoke(startTemporaryDocumentCleanup))
+	must(container.Provide(service.NewNativeAttachmentIngestService))
+	must(container.Invoke(startNativeAttachmentCleanup))
 
 	// Chat pipeline components for processing chat requests
 	must(container.Provide(chatpipeline.NewEventManager))
@@ -1535,6 +1537,28 @@ func startTemporaryDocumentCleanup(svc interfaces.TemporaryDocumentService, clea
 		}
 	}()
 	cleaner.RegisterWithName("TemporaryDocumentCleanup", func() error {
+		close(stop)
+		return nil
+	})
+}
+
+// startNativeAttachmentCleanup purges expired oversized-run attachment
+// documents from the engine-owned ephemeral knowledge base.
+func startNativeAttachmentCleanup(svc *service.NativeAttachmentIngestService, cleaner interfaces.ResourceCleaner) {
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				svc.CleanupExpired(context.Background(), types.DefaultBuiltinModelTenantID)
+			case <-stop:
+				return
+			}
+		}
+	}()
+	cleaner.RegisterWithName("NativeAttachmentCleanup", func() error {
 		close(stop)
 		return nil
 	})
