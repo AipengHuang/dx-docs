@@ -23,12 +23,29 @@ func (h *Handler) routeOversizedAttachments(
 	if scope == nil || h.nativeAttachments == nil {
 		return
 	}
-	kbID, err := h.nativeAttachments.EphemeralKB(ctx, tenantID)
+	owned := make([]string, 0, len(rc.attachments))
+	for i := range rc.attachments {
+		attachment := &rc.attachments[i]
+		if !attachment.IsTruncated || attachment.FullContent == "" {
+			continue
+		}
+	}
+	var kbID string
+	var err error
+	if len(owned) > 0 {
+		kbID, err = h.nativeAttachments.EphemeralKB(ctx, tenantID)
+	} else {
+		// Pure follow-up turn: never provision a KB just to look for history.
+		kbID, err = h.nativeAttachments.FindEphemeralKB(ctx, tenantID)
+	}
 	if err != nil {
 		logger.Warnf(ctx, "native attachment ephemeral KB unavailable, keeping inline path: %v", err)
 		return
 	}
-	owned := make([]string, 0, len(rc.attachments))
+	if kbID == "" {
+		return
+	}
+	owned = owned[:0]
 	for i := range rc.attachments {
 		attachment := &rc.attachments[i]
 		if !attachment.IsTruncated || attachment.FullContent == "" {
@@ -133,7 +150,21 @@ func (h *Handler) reattachSessionTemporaryDocuments(
 	if len(scope.OwnedKnowledgeBases[kbID]) > 0 {
 		rc.knowledgeBaseIDs = append(rc.knowledgeBaseIDs, kbID)
 	}
+	rc.knowledgeIDs = dedupeIDs(rc.knowledgeIDs)
+	rc.knowledgeBaseIDs = dedupeIDs(rc.knowledgeBaseIDs)
 	logger.Infof(ctx, "session temporary documents re-scoped: session=%s count=%d", sessionID, len(scope.OwnedKnowledgeBases[kbID]))
+}
+
+func dedupeIDs(ids []string) []string {
+	seen := make(map[string]bool, len(ids))
+	out := ids[:0]
+	for _, id := range ids {
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func nativeAttachmentIndexedStub(fileName string, lineCount int, knowledgeID string) string {

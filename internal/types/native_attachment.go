@@ -12,6 +12,8 @@ type NativeAttachmentIngestResult struct {
 // retrievable temporary documents instead of prompt-inlined truncated text.
 type NativeAttachmentIngestor interface {
 	EphemeralKB(ctx context.Context, tenantID uint64) (string, error)
+	// FindEphemeralKB locates the engine-owned KB without creating it.
+	FindEphemeralKB(ctx context.Context, tenantID uint64) (string, error)
 	Ingest(ctx context.Context, tenantID uint64, kbID string, content, fileName, conversationID string) (NativeAttachmentIngestResult, error)
 	ListTemporaryDocuments(ctx context.Context, tenantID uint64, kbID string) ([]*Knowledge, error)
 	CleanupExpired(ctx context.Context, tenantID uint64)
