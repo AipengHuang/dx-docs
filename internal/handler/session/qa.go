@@ -406,6 +406,18 @@ func (h *Handler) parseQARequest(c *gin.Context, logPrefix string) (*qaRequestCo
 		resourceRewriter:      resourceRewriter,
 	}
 
+	// Platform expert runs: trade truncated inline attachments for retrievable
+	// temporary documents before the agent graph starts.
+	if len(reqCtx.attachments) > 0 {
+		if scope, scoped := types.PlatformAgentScopeFromContext(ctx); scoped {
+			ingestTenantID := c.GetUint64(types.TenantIDContextKey.String())
+			if effectiveTenantID != 0 {
+				ingestTenantID = effectiveTenantID
+			}
+			h.routeOversizedAttachments(ctx, reqCtx, scope, ingestTenantID, sessionID)
+		}
+	}
+
 	return reqCtx, &request, nil
 }
 

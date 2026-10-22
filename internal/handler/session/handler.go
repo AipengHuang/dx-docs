@@ -31,6 +31,7 @@ type Handler struct {
 	modelService         interfaces.ModelService // Service for model management (VLM access)
 	attachmentProcessor  *AttachmentProcessor    // Processor for file attachments
 	temporaryDocuments   interfaces.TemporaryDocumentService
+	nativeAttachments    types.NativeAttachmentIngestor // Oversized platform-run attachment ingestion
 }
 
 // NewHandler creates a new instance of Handler with all necessary dependencies
@@ -51,6 +52,7 @@ func NewHandler(
 	documentReader interfaces.DocumentReader,
 	imageResolver *docparser.ImageResolver,
 	temporaryDocuments interfaces.TemporaryDocumentService,
+	nativeAttachments types.NativeAttachmentIngestor,
 ) *Handler {
 	return &Handler{
 		sessionService:       sessionService,
@@ -67,6 +69,7 @@ func NewHandler(
 		storageResolver:      storageResolver,
 		modelService:         modelService,
 		temporaryDocuments:   temporaryDocuments,
+		nativeAttachments:    nativeAttachments,
 		attachmentProcessor: NewAttachmentProcessor(
 			fileService,
 			documentReader,

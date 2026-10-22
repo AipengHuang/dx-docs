@@ -299,6 +299,12 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	logger.Debugf(ctx, "[Container] Audit log retention runner registered")
 	must(container.Provide(service.NewHousekeepingService))
 	must(container.Invoke(startHousekeepingService))
+
+	// Oversized platform-run attachments: ingest for retrieval. Registered
+	// after the data-source scheduler so KnowledgeBaseService can resolve.
+	must(container.Provide(service.NewNativeAttachmentIngestService))
+	must(container.Provide(func(svc *service.NativeAttachmentIngestService) types.NativeAttachmentIngestor { return svc }))
+	must(container.Invoke(startNativeAttachmentCleanup))
 	logger.Debugf(ctx, "[Container] Knowledge housekeeping runner registered")
 	// HTTP handlers layer
 	logger.Debugf(ctx, "[Container] Registering HTTP handlers...")
@@ -1535,6 +1541,36 @@ func startTemporaryDocumentCleanup(svc interfaces.TemporaryDocumentService, clea
 		}
 	}()
 	cleaner.RegisterWithName("TemporaryDocumentCleanup", func() error {
+		close(stop)
+		return nil
+	})
+}
+
+// startNativeAttachmentCleanup purges expired oversized-run attachment
+// documents from the engine-owned ephemeral knowledge base.
+func startNativeAttachmentCleanup(svc *service.NativeAttachmentIngestService, tenants interfaces.TenantService, cleaner interfaces.ResourceCleaner) {
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				// Sweep every tenant: runs ingest under the caller's effective
+				// agent tenant, so temporary documents can exist outside the
+				// builtin tenant. CleanupExpired is a lookup-only sweep and
+				// never provisions KBs for tenants that have nothing to purge.
+				if tenantList, err := tenants.ListAllTenants(context.Background()); err == nil {
+					for _, tenant := range tenantList {
+						svc.CleanupExpired(context.Background(), tenant.ID)
+					}
+				}
+			case <-stop:
+				return
+			}
+		}
+	}()
+	cleaner.RegisterWithName("NativeAttachmentCleanup", func() error {
 		close(stop)
 		return nil
 	})

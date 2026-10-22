@@ -84,6 +84,7 @@ type MessageAttachment struct {
 	FileType       string `json:"file_type"`                 // File extension (e.g., ".pdf", ".docx")
 	FileSize       int64  `json:"file_size"`                 // File size in bytes
 	Content        string `json:"content,omitempty"`         // Extracted text content (for small text files)
+	FullContent    string `json:"-"`                         // Complete pre-truncation text, kept only when truncated so oversized attachments can be ingested for retrieval
 	IsTruncated    bool   `json:"is_truncated,omitempty"`    // Whether content was truncated
 	LineCount      int    `json:"line_count,omitempty"`      // Total line count (for text files)
 	ContentMode    string `json:"content_mode,omitempty"`    // full or selected_chunks

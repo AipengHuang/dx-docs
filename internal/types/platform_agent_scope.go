@@ -12,14 +12,18 @@ type platformAgentRequiredKey struct{}
 
 // PlatformAgentScope is attached only after a private execution grant. Nil
 // document IDs allow the granted KB; a non-nil list restricts it before recall.
+// OwnedKnowledgeBases follows the same shape but marks engine-owned ephemeral
+// sources (oversized chat attachments ingested per run): they are honored by
+// the scope checks without a platform authority callback.
 type PlatformAgentScope struct {
-	RequestContext context.Context
-	MaxSteps       int
-	KnowledgeBases map[string][]string
-	Authorize      func(context.Context, string, string, json.RawMessage) error
-	ListSkills     func(context.Context) ([]PlatformSkillMetadata, error)
-	ReadSkill      func(context.Context, string, string) (PlatformSkillContent, error)
-	WriteSkill     func(context.Context, string, string) error
+	RequestContext        context.Context
+	MaxSteps              int
+	KnowledgeBases        map[string][]string
+	OwnedKnowledgeBases   map[string][]string
+	Authorize             func(context.Context, string, string, json.RawMessage) error
+	ListSkills            func(context.Context) ([]PlatformSkillMetadata, error)
+	ReadSkill             func(context.Context, string, string) (PlatformSkillContent, error)
+	WriteSkill            func(context.Context, string, string) error
 }
 
 type PlatformSkillMetadata struct {
@@ -55,6 +59,15 @@ func AuthorizePlatformAgentAction(ctx context.Context, action, resourceID string
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	// HybridSearch authorizes a KB with action "knowledge"; engine-owned
+	// attachment KBs exist only in per-run scopes, never in a platform grant.
+	if action == "knowledge" {
+		if scope, ok := PlatformAgentScopeFromContext(ctx); ok {
+			if _, owned := scope.OwnedKnowledgeBases[resourceID]; owned {
+				return nil
+			}
+		}
+	}
 	if ctx.Value(platformAgentRequiredKey{}) != true {
 		return nil
 	}
@@ -70,7 +83,7 @@ func AuthorizePlatformAgentAction(ctx context.Context, action, resourceID string
 	return scope.Authorize(ctx, action, resourceID, args)
 }
 func (s *PlatformAgentScope) SearchKnowledgeIDs(kbID string, requested []string) ([]string, error) {
-	allowed, ok := s.KnowledgeBases[kbID]
+	allowed, ok := s.knowledgeBaseAccess(kbID)
 	if !ok || (allowed != nil && len(allowed) == 0) {
 		return nil, errors.New("knowledge scope is unavailable")
 	}
@@ -88,10 +101,25 @@ func (s *PlatformAgentScope) SearchKnowledgeIDs(kbID string, requested []string)
 	return slices.Clone(allowed), nil
 }
 
+func (s *PlatformAgentScope) knowledgeBaseAccess(kbID string) ([]string, bool) {
+	if s.OwnedKnowledgeBases != nil {
+		if allowed, ok := s.OwnedKnowledgeBases[kbID]; ok {
+			return allowed, true
+		}
+	}
+	allowed, ok := s.KnowledgeBases[kbID]
+	return allowed, ok
+}
+
 func AuthorizePlatformAgentDocument(ctx context.Context, kbID, documentID string) error {
 	if scope, ok := PlatformAgentScopeFromContext(ctx); ok {
 		if _, err := scope.SearchKnowledgeIDs(kbID, []string{documentID}); err != nil {
 			return err
+		}
+		// Engine-owned ephemeral documents never round-trip to the platform:
+		// the whitelist above is the whole authority for them.
+		if _, owned := scope.OwnedKnowledgeBases[kbID]; owned {
+			return nil
 		}
 	}
 	args, err := json.Marshal(map[string]string{"knowledge_base_id": kbID})
