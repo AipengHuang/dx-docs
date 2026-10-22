@@ -74,7 +74,12 @@ func nativeAttachmentTTLFromEnv() time.Duration {
 	return nativeAttachmentDefaultTTL
 }
 
+func withNativeAttachmentTenant(ctx context.Context, tenantID uint64) context.Context {
+	return context.WithValue(ctx, types.TenantIDContextKey, tenantID)
+}
+
 func (s *NativeAttachmentIngestService) EphemeralKB(ctx context.Context, tenantID uint64) (string, error) {
+	ctx = withNativeAttachmentTenant(ctx, tenantID)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if id, ok := s.kbCache[tenantID]; ok {
@@ -124,6 +129,7 @@ func (s *NativeAttachmentIngestService) defaultEmbeddingModelID(ctx context.Cont
 func (s *NativeAttachmentIngestService) Ingest(
 	ctx context.Context, tenantID uint64, kbID, content, fileName, conversationID string,
 ) (types.NativeAttachmentIngestResult, error) {
+	ctx = withNativeAttachmentTenant(ctx, tenantID)
 	cfg := chunker.DefaultConfig()
 	cfg.Strategy = chunker.StrategyAuto
 	cfg.ChunkSize = nativeAttachmentChunkSize
@@ -170,6 +176,7 @@ func isNativeTempAttachment(doc *types.Knowledge) bool {
 }
 
 func (s *NativeAttachmentIngestService) CleanupExpired(ctx context.Context, tenantID uint64) {
+	ctx = withNativeAttachmentTenant(ctx, tenantID)
 	kbID, err := s.EphemeralKB(ctx, tenantID)
 	if err != nil {
 		return

@@ -268,8 +268,6 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	}
 	must(container.Provide(service.NewTemporaryDocumentService))
 	must(container.Invoke(startTemporaryDocumentCleanup))
-	must(container.Provide(service.NewNativeAttachmentIngestService))
-	must(container.Invoke(startNativeAttachmentCleanup))
 
 	// Chat pipeline components for processing chat requests
 	must(container.Provide(chatpipeline.NewEventManager))
@@ -301,6 +299,12 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	logger.Debugf(ctx, "[Container] Audit log retention runner registered")
 	must(container.Provide(service.NewHousekeepingService))
 	must(container.Invoke(startHousekeepingService))
+
+	// Oversized platform-run attachments: ingest for retrieval. Registered
+	// after the data-source scheduler so KnowledgeBaseService can resolve.
+	must(container.Provide(service.NewNativeAttachmentIngestService))
+	must(container.Provide(func(svc *service.NativeAttachmentIngestService) types.NativeAttachmentIngestor { return svc }))
+	must(container.Invoke(startNativeAttachmentCleanup))
 	logger.Debugf(ctx, "[Container] Knowledge housekeeping runner registered")
 	// HTTP handlers layer
 	logger.Debugf(ctx, "[Container] Registering HTTP handlers...")
