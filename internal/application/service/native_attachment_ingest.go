@@ -120,10 +120,10 @@ func (s *NativeAttachmentIngestService) ephemeralKB(ctx context.Context, tenantI
 		return "", err
 	}
 	kb, err := s.kbService.CreateKnowledgeBase(ctx, &types.KnowledgeBase{
-		Name:            nativeAttachmentKBName,
-		Description:     nativeAttachmentKBMarker,
-		Type:            "document",
-		TenantID:        tenantID,
+		Name:             nativeAttachmentKBName,
+		Description:      nativeAttachmentKBMarker,
+		Type:             "document",
+		TenantID:         tenantID,
 		EmbeddingModelID: embeddingModelID,
 	})
 	if err != nil {
@@ -137,6 +137,11 @@ func (s *NativeAttachmentIngestService) defaultEmbeddingModelID(ctx context.Cont
 	models, err := s.modelService.ListModels(ctx)
 	if err != nil {
 		return "", err
+	}
+	for _, model := range models {
+		if model.Type == types.ModelTypeEmbedding && model.Status == types.ModelStatusActive && model.IsDefault {
+			return model.ID, nil
+		}
 	}
 	for _, model := range models {
 		if model.Type == types.ModelTypeEmbedding && model.Status == types.ModelStatusActive {
