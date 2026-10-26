@@ -67,7 +67,7 @@ func (h *PlatformAgentHandler) Execute(c *gin.Context) {
 	}
 	d := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 72_000_000))
 	d.DisallowUnknownFields()
-	if d.Decode(&body) != nil || d.Decode(&struct{}{}) != io.EOF || body.UserID != grant.UserID || body.RunID == "" || body.SessionID == "" || body.RunContext == "" || body.MaxSteps < 1 || body.MaxSteps > 100 || body.Request.AgentID != c.Param("id") || body.Request.AgentSourceTenantID != 0 {
+	if d.Decode(&body) != nil || d.Decode(&struct{}{}) != io.EOF || body.UserID != grant.UserID || body.RunID == "" || body.SessionID == "" || body.RunContext == "" || body.MaxSteps < 1 || body.MaxSteps > 10_000 || body.Request.AgentID != c.Param("id") || body.Request.AgentSourceTenantID != 0 {
 		agentAPIError(c, 400, "REQUEST_INVALID")
 		return
 	}
