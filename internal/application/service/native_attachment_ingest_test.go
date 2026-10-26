@@ -76,14 +76,64 @@ func (s *ingestKnowledgeStub) ListKnowledgeByKnowledgeBaseID(_ context.Context, 
 
 type ingestModelStub struct {
 	interfaces.ModelService
+	models []*types.Model
 }
 
-func (ingestModelStub) ListModels(context.Context) ([]*types.Model, error) {
+func (s ingestModelStub) ListModels(context.Context) ([]*types.Model, error) {
+	if s.models != nil {
+		return s.models, nil
+	}
 	return []*types.Model{{
 		ID:     "bge-m3",
 		Type:   types.ModelTypeEmbedding,
 		Status: types.ModelStatusActive,
 	}}, nil
+}
+
+func TestNativeAttachmentIngestSelectsDefaultActiveEmbedding(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		models []*types.Model
+		want   string
+	}{
+		{
+			name: "prefers configured default over first active model",
+			models: []*types.Model{
+				{ID: "bge-m3", Type: types.ModelTypeEmbedding, Status: types.ModelStatusActive},
+				{ID: "qwen", Type: types.ModelTypeEmbedding, Status: types.ModelStatusActive, IsDefault: true},
+			},
+			want: "qwen",
+		},
+		{
+			name: "keeps first active embedding when no eligible default exists",
+			models: []*types.Model{
+				{ID: "chat", Type: types.ModelTypeKnowledgeQA, Status: types.ModelStatusActive, IsDefault: true},
+				{ID: "downloading", Type: types.ModelTypeEmbedding, Status: types.ModelStatusDownloading, IsDefault: true},
+				{ID: "bge-m3", Type: types.ModelTypeEmbedding, Status: types.ModelStatusActive},
+				{ID: "other", Type: types.ModelTypeEmbedding, Status: types.ModelStatusActive},
+			},
+			want: "bge-m3",
+		},
+		{
+			name:   "refuses creation without an active embedding model",
+			models: []*types.Model{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kb, ks := &ingestKBStub{}, &ingestKnowledgeStub{}
+			svc := newNativeAttachmentIngestServiceWithTTL(kb, ks, ingestModelStub{models: tc.models}, 24*time.Hour)
+			_, err := svc.EphemeralKB(context.Background(), 10000)
+			if tc.want == "" {
+				if err == nil || kb.created != 0 {
+					t.Fatalf("expected refusal without creating a KB, err=%v created=%d", err, kb.created)
+				}
+				return
+			}
+			if err != nil || len(kb.kbs) != 1 || kb.kbs[0].EmbeddingModelID != tc.want {
+				t.Fatalf("model selection: KBs=%+v err=%v, want %s", kb.kbs, err, tc.want)
+			}
+		})
+	}
 }
 
 func newIngestService(kb *ingestKBStub, ks *ingestKnowledgeStub, ttl time.Duration) *NativeAttachmentIngestService {

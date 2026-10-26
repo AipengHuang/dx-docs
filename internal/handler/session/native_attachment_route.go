@@ -23,16 +23,18 @@ func (h *Handler) routeOversizedAttachments(
 	if scope == nil || h.nativeAttachments == nil {
 		return
 	}
-	owned := make([]string, 0, len(rc.attachments))
+	hasOversized := false
 	for i := range rc.attachments {
 		attachment := &rc.attachments[i]
 		if !attachment.IsTruncated || attachment.FullContent == "" {
 			continue
 		}
+		hasOversized = true
+		break
 	}
 	var kbID string
 	var err error
-	if len(owned) > 0 {
+	if hasOversized {
 		kbID, err = h.nativeAttachments.EphemeralKB(ctx, tenantID)
 	} else {
 		// Pure follow-up turn: never provision a KB just to look for history.
@@ -45,7 +47,7 @@ func (h *Handler) routeOversizedAttachments(
 	if kbID == "" {
 		return
 	}
-	owned = owned[:0]
+	owned := make([]string, 0, len(rc.attachments))
 	for i := range rc.attachments {
 		attachment := &rc.attachments[i]
 		if !attachment.IsTruncated || attachment.FullContent == "" {
