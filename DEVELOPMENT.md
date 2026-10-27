@@ -45,13 +45,16 @@ replacement business Agent execution loop.
   [PR #75](https://github.com/AipengHuang/dixian-app/pull/75) (`f9367716`).
   The migration covered 23 Agent versions and 46 sessions.
 - The 9/9 result is a **smoke check only**, not full business acceptance.
-  Business testing is paused because the model provider returned HTTP 429 / code
-  `1113` (insufficient balance or resource package). Two observed business-answer
-  defects have not been retested; do not report them resolved.
-- App [PR #77](https://github.com/AipengHuang/dixian-app/pull/77), addressing the
-  concurrent flush 502 and historical error display, was still in CI at this
-  handoff; it is not included in the deployed baseline above. Verify its current
-  merge, CI and deployment state before relying on it.
+  The user restored model quota and explicitly resumed business testing on
+  2026-10-27. Earlier quota-pause notes are historical, not a current instruction.
+- App [PR #77](https://github.com/AipengHuang/dixian-app/pull/77) was deployed as
+  `f92e7bea`; its event-flush and historical-error fixes have been checked.
+  Follow-up answer, workbook-preservation and citation fixes are tracked in
+  App [PR #79](https://github.com/AipengHuang/dixian-app/pull/79).
+- Current business outcomes and remaining verification boundaries live in the
+  [central cross-repository handoff](https://github.com/AipengHuang/dixian-platform/blob/main/docs/architecture/README.md#2026-10-27-交接快照与验证边界).
+  Do not duplicate changing acceptance counts here or equate merged code, green
+  CI, a healthy deployment and verified model answers.
 - All three repositories now deploy their own services automatically from
   `main`, sharing `/opt/dixian/.deploy.lock` on the deployment host. This repo's
   [workflow](./.github/workflows/deploy.yml) builds knowledge/docreader images,
