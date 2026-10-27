@@ -26,6 +26,7 @@ type RouterParams struct {
 	DataSourceCredentialsHandler *handler.DataSourceCredentialsHandler
 	AuditLogHandler              *handler.AuditLogHandler
 	AgentHandler                 *handler.PlatformAgentHandler
+	KnowledgeToolsHandler        *handler.KnowledgeToolsHandler
 }
 
 // NewRouter 创建仅供 Platform 调用的知识执行路由。
@@ -51,7 +52,5 @@ func NewRouter(params RouterParams) *gin.Engine {
 	internal.GET("/agents/:id", grant(params, middleware.OperationViewAgent, "id"), params.AgentHandler.Get)
 	internal.PUT("/agents/:id", grant(params, middleware.OperationManageAgent, "id"), params.AgentHandler.Save)
 	internal.DELETE("/agents/:id", grant(params, middleware.OperationManageAgent, "id"), params.AgentHandler.Delete)
-	internal.POST("/agents/:id/execute", grant(params, middleware.OperationExecuteAgent, "id"), params.AgentHandler.Execute)
-	internal.POST("/agents/:id/tool-approvals/:pending_id", grant(params, middleware.OperationExecuteAgent, "id"), params.AgentHandler.ResolveToolApproval)
 	return router
 }
