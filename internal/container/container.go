@@ -310,6 +310,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	logger.Debugf(ctx, "[Container] Registering HTTP handlers...")
 	must(container.Provide(handler.NewAuditLogHandler))
 	must(container.Provide(handler.NewKnowledgeBaseHandler))
+	must(container.Provide(handler.NewKnowledgeToolsHandler))
 	must(container.Provide(handler.NewPlatformAgentHandler))
 	must(container.Provide(session.NewHandler))
 	must(container.Provide(handler.NewKnowledgeHandler))

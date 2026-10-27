@@ -19,6 +19,7 @@ func grant(params RouterParams, operation middleware.ServiceOperation, resourceP
 
 func registerInternalKnowledgeBaseRoutes(r *gin.RouterGroup, params RouterParams) {
 	h := params.KBHandler
+	r.POST("/knowledge-bases/:id/tools/:tool", grant(params, middleware.OperationSearchKnowledge, "id"), params.KnowledgeToolsHandler.Execute)
 	r.GET("/knowledge-bases", grant(params, middleware.OperationListKnowledgeBases, ""), h.ListKnowledgeBases)
 	r.POST("/knowledge-bases", grant(params, middleware.OperationManageKnowledgeBase, ""), h.CreateKnowledgeBase)
 	r.POST("/knowledge-bases/:id/provision", grant(params, middleware.OperationManageKnowledgeBase, "id"), h.ProvisionPlatformKnowledgeBase)
